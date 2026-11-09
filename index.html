@@ -147,9 +147,9 @@
 <p id="scheduleEmpty" class="note">还没有排班，点上面的“生成排班”。</p>
 <table id="scheduleTable" hidden>
   <colgroup>
+    <col style="width: 30%">
     <col style="width: 24%">
-    <col style="width: 25%">
-    <col style="width: 51%">
+    <col style="width: 46%">
   </colgroup>
   <thead>
     <tr><th>日期</th><th>值日</th><th>备注</th></tr>
@@ -215,6 +215,15 @@
   function formatMD(key) {
     var d = parseKey(key);
     return d ? (d.getMonth() + 1) + '.' + d.getDate() : String(key || '');
+  }
+
+  var WEEK_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+  // 11.9 周一
+  function formatMDWeek(key) {
+    var d = parseKey(key);
+    if (!d) return String(key || '');
+    return formatMD(key) + ' ' + WEEK_NAMES[d.getDay()];
   }
 
   function onLeave(leaves, memberId, key) {
@@ -620,6 +629,7 @@
     addDays: addDays,
     todayKey: todayKey,
     formatMD: formatMD,
+    formatMDWeek: formatMDWeek,
     onLeave: onLeave,
     computeQuotas: computeQuotas,
     buildSchedule: buildSchedule
@@ -815,7 +825,7 @@
     sorted.forEach(function (l) {
       var li = document.createElement('li');
       var text = document.createElement('span');
-      text.textContent = memberName(l.memberId) + '：' + S.formatMD(l.start) + ' – ' + S.formatMD(l.end);
+      text.textContent = memberName(l.memberId) + '：' + S.formatMDWeek(l.start) + ' – ' + S.formatMDWeek(l.end);
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = '删除';
@@ -845,13 +855,13 @@
     $('scheduleEmpty').hidden = true;
     table.hidden = false;
     info.textContent = '起始 ' + sched.start + '，共 ' + sched.rows.length + ' 天（' +
-      S.formatMD(sched.rows[0].date) + ' – ' + S.formatMD(sched.rows[sched.rows.length - 1].date) + '）';
+      S.formatMDWeek(sched.rows[0].date) + ' – ' + S.formatMDWeek(sched.rows[sched.rows.length - 1].date) + '）';
 
     var frag = document.createDocumentFragment();
     sched.rows.forEach(function (r) {
       var tr = document.createElement('tr');
       var tdDate = document.createElement('td');
-      tdDate.textContent = S.formatMD(r.date);
+      tdDate.textContent = S.formatMDWeek(r.date);
       var tdName = document.createElement('td');
       tdName.textContent = r.name || '无人可值日';
       var tdNote = document.createElement('td');
@@ -1145,7 +1155,7 @@
     save();
     renderLeaves();
     changed();
-    say('已添加请假：' + memberName(memberId) + ' ' + S.formatMD(start) + ' – ' + S.formatMD(end) + '，记得重新生成排班。');
+    say('已添加请假：' + memberName(memberId) + ' ' + S.formatMDWeek(start) + ' – ' + S.formatMDWeek(end) + '，记得重新生成排班。');
   }
 
   function removeLeave(id) {
