@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>寝室卫生排班</title>
+<style>
+  body {
+    background: #fff;
+    color: #000;
+    margin: 12px;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 760px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  h2 {
+    font-size: 17px;
+    margin: 22px 0 6px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0;
+  }
+  .row label {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  input[type="text"] {
+    width: 7em;
+    max-width: 40vw;
+  }
+  input[type="date"] {
+    max-width: 46vw;
+  }
+  input[type="number"] {
+    width: 5em;
+  }
+  select {
+    max-width: 40vw;
+  }
+  ul {
+    margin: 4px 0;
+    padding-left: 22px;
+  }
+  li {
+    margin: 4px 0;
+    word-break: break-word;
+  }
+  table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    max-width: 560px;
+    margin: 6px 0;
+  }
+  th, td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+    font-weight: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  th {
+    font-weight: bold;
+  }
+  .note {
+    margin: 4px 0;
+  }
+  #message {
+    margin: 16px 0 0;
+    min-height: 1.5em;
+  }
+  /* 窄屏：一行只放一个输入项，避免右侧被截断 */
+  @media (max-width: 560px) {
+    .row label {
+      flex: 1 1 100%;
+    }
+    input[type="text"],
+    input[type="date"],
+    input[type="number"],
+    select {
+      max-width: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>寝室卫生排班</h1>
+
+<h2>成员管理</h2>
+<div class="row">
+  <input id="memberName" type="text" placeholder="室友姓名" maxlength="12" autocomplete="off">
+  <button id="addMemberBtn" type="button">添加</button>
+</div>
+<p id="memberEmpty" class="note">还没有成员，先添加室友。</p>
+<ul id="memberList"></ul>
+
+<h2>排班设置</h2>
+<div class="row">
+  <label>起始日期 <input id="startDate" type="date"></label>
+  <label>天数 <input id="daysInput" type="number" min="1" max="366" step="1"></label>
+</div>
+<div class="row">
+  <button id="generateBtn" type="button">生成排班</button>
+</div>
+<p id="hint" class="note"></p>
+
+<h2>请假管理</h2>
+<div class="row">
+  <label>成员 <select id="leaveMember"></select></label>
+  <label>开始 <input id="leaveStart" type="date"></label>
+  <label>结束 <input id="leaveEnd" type="date"></label>
+</div>
+<div class="row">
+  <button id="addLeaveBtn" type="button">添加请假</button>
+</div>
+<p id="leaveEmpty" class="note">还没有请假记录。</p>
+<ul id="leaveList"></ul>
+
+<h2>排班表</h2>
+<p id="scheduleInfo" class="note"></p>
+<p id="scheduleEmpty" class="note">还没有排班，点上面的“生成排班”。</p>
+<table id="scheduleTable" hidden>
+  <colgroup>
+    <col style="width: 24%">
+    <col style="width: 25%">
+    <col style="width: 51%">
+  </colgroup>
+  <thead>
+    <tr><th>日期</th><th>值日</th><th>备注</th></tr>
+  </thead>
+  <tbody id="scheduleBody"></tbody>
+</table>
+
+<h2>累计值日天数</h2>
+<ul id="statsList"></ul>
+<p id="fairnessNote" class="note"></p>
+
+<p id="message" role="status"></p>
+
+<script>
+/* 寝室卫生排班 —— 核心算法（纯函数，不依赖 DOM，方便单独测试） */
+(function (root) {
+  'use strict';
+
+  function pad2(n) {
+    return (n < 10 ? '0' : '') + n;
+  }
+
+  function toKey(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function parseKey(key) {
+    var parts = String(key || '').split('-');
+    if (parts.length !== 3) return null;
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    var d = parseInt(parts[2], 10);
+    if (!isFinite(y) || !isFinite(m) || !isFinite(d)) return null;
+    var date = new Date(y, m - 1, d);
+    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+    return date;
+  }
+
+  function isDateKey(key) {
+    return !!parseKey(key);
+  }
+
+  function addDays(date, n) {
+    var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+
+  function todayKey() {
+    return toKey(new Date());
+  }
+
+  // 11.9 这种 M.D 格式
+  function formatMD(key) {
+    var d = parseKey(key);
+    return d ? (d.getMonth() + 1) + '.' + d.getDate() : String(key || '');
+  }
+
+  function onLeave(leaves, memberId, key) {
+    for (var i = 0; i < leaves.length; i++) {
+      var l = leaves[i];
+      if (l.memberId === memberId && l.start && l.end && key >= l.start && key <= l.end) return true;
+    }
+    return false;
+  }
+
+  // 按可值日天数分配“目标值日天数”，尽量让所有人一样多（最多差 1 天），
+  // 且不超过这个人在本时段内可值日的天数。
+  function computeQuotas(caps, total) {
+    var n = caps.length;
+    var q = new Array(n).fill(0);
+    if (n === 0 || total <= 0) return q;
+
+    var level = 0;
+    while (level < total) {
+      var sum = 0;
+      for (var i = 0; i < n; i++) sum += Math.min(caps[i], level + 1);
+      if (sum > total) break;
+      level++;
+    }
+    for (var j = 0; j < n; j++) q[j] = Math.min(caps[j], level);
+
+    var rest = total;
+    for (var k = 0; k < n; k++) rest -= q[k];
+    var idx = [];
+    for (var t = 0; t < n; t++) if (q[t] < caps[t]) idx.push(t);
+    idx.sort(function (a, b) {
+      return (caps[b] - caps[a]) || (a - b);
+    });
+    for (var p = 0; p < idx.length && rest > 0; p++) {
+      q[idx[p]]++;
+      rest--;
+    }
+    return q;
+  }
+
+  // ---------- 最大流：判断“剩下的天能不能正好按额度排完” ----------
+  function Flow(n) {
+    this.n = n;
+    this.head = new Array(n);
+    for (var i = 0; i < n; i++) this.head[i] = -1;
+    this.to = [];
+    this.cap = [];
+    this.next = [];
+  }
+
+  Flow.prototype.add = function (u, v, c) {
+    var id = this.to.length;
+    this.to.push(v);
+    this.cap.push(c);
+    this.next.push(this.head[u]);
+    this.head[u] = id;
+    this.to.push(u);
+    this.cap.push(0);
+    this.next.push(this.head[v]);
+    this.head[v] = id + 1;
+  };
+
+  Flow.prototype.maxFlow = function (s, t) {
+    var n = this.n;
+    var level = new Array(n);
+    var iter = new Array(n);
+    var flow = 0;
+    while (true) {
+      for (var i = 0; i < n; i++) level[i] = -1;
+      level[s] = 0;
+      var q = [s];
+      for (var h = 0; h < q.length; h++) {
+        var v = q[h];
+        for (var e = this.head[v]; e !== -1; e = this.next[e]) {
+          if (this.cap[e] > 0 && level[this.to[e]] < 0) {
+            level[this.to[e]] = level[v] + 1;
+            q.push(this.to[e]);
+          }
+        }
+      }
+      if (level[t] < 0) break;
+      for (var j = 0; j < n; j++) iter[j] = this.head[j];
+      var f;
+      while ((f = this.dfs(s, t, Infinity, level, iter)) > 0) flow += f;
+    }
+    return flow;
+  };
+
+  Flow.prototype.dfs = function (v, t, f, level, iter) {
+    if (v === t) return f;
+    for (var e = iter[v]; e !== -1; e = this.next[e]) {
+      var u = this.to[e];
+      if (this.cap[e] > 0 && level[u] === level[v] + 1) {
+        var d = this.dfs(u, t, Math.min(f, this.cap[e]), level, iter);
+        if (d > 0) {
+          this.cap[e] -= d;
+          this.cap[e ^ 1] += d;
+          return d;
+        }
+      }
+      iter[v] = this.next[e];
+    }
+    return 0;
+  };
+
+  // 从 fromDay 往后，剩下的天能否让每个人正好排满 need[i] 天
+  function canFinish(fromDay, days, available, need) {
+    var n = need.length;
+    var needTotal = 0;
+    for (var i = 0; i < n; i++) {
+      if (need[i] < 0) return false;
+      needTotal += need[i];
+    }
+    var dayIdx = [];
+    for (var d = fromDay; d < days; d++) {
+      for (var m = 0; m < n; m++) {
+        if (available[d][m] && need[m] > 0) {
+          dayIdx.push(d);
+          break;
+        }
+      }
+    }
+    if (dayIdx.length === 0) return needTotal === 0;
+    if (needTotal !== dayIdx.length) return false;
+
+    var S = 0;
+    var T = 1 + n + dayIdx.length;
+    var g = new Flow(T + 1);
+    for (var i2 = 0; i2 < n; i2++) if (need[i2] > 0) g.add(S, 1 + i2, need[i2]);
+    for (var k = 0; k < dayIdx.length; k++) {
+      var dk = dayIdx[k];
+      var node = 1 + n + k;
+      for (var m2 = 0; m2 < n; m2++) if (available[dk][m2] && need[m2] > 0) g.add(1 + m2, node, 1);
+      g.add(node, T, 1);
+    }
+    return g.maxFlow(S, T) === dayIdx.length;
+  }
+
+  function cmpKey(a, b) {
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] > b[i]) return 1;
+      if (a[i] < b[i]) return -1;
+    }
+    return 0;
+  }
+
+  /*
+   * 生成排班
+   * members: [{id, name}]
+   * leaves:  [{memberId, start, end}]，start/end 为 YYYY-MM-DD
+   * startKey: 起始日期 YYYY-MM-DD
+   * days: 天数
+   *
+   * 规则：
+   *  1. 请假当天跳过，后面的人依次顶上；
+   *  2. 请假结束后补回，排在原轮次后面（原本排在他后面的人先值）；
+   *  3. 跨多天请假欠下的班顺延到下一轮，允许连续值日两天消化；
+   *  4. 最终每人累计值日天数差距不超过 1 天。
+   */
+  function buildSchedule(members, leaves, startKey, days) {
+    var n = members.length;
+    var start = parseKey(startKey);
+    if (!start) start = new Date();
+    if (!(days > 0)) days = 0;
+
+    var dateKeys = [];
+    for (var i = 0; i < days; i++) dateKeys.push(toKey(addDays(start, i)));
+
+    // available[天][成员]
+    var available = [];
+    for (var d = 0; d < days; d++) {
+      var row = [];
+      for (var m = 0; m < n; m++) row.push(!onLeave(leaves, members[m].id, dateKeys[d]));
+      available.push(row);
+    }
+
+    var caps = [];
+    for (var m2 = 0; m2 < n; m2++) {
+      var c = 0;
+      for (var d2 = 0; d2 < days; d2++) if (available[d2][m2]) c++;
+      caps.push(c);
+    }
+
+    var assignable = 0;
+    for (var d3 = 0; d3 < days; d3++) {
+      for (var m3 = 0; m3 < n; m3++) {
+        if (available[d3][m3]) {
+          assignable++;
+          break;
+        }
+      }
+    }
+
+    var quotas = computeQuotas(caps, assignable);
+    var count = new Array(n).fill(0);
+    var streak = new Array(n).fill(0); // 截至昨天的连续值日天数
+    var queue = [];
+    for (var m4 = 0; m4 < n; m4++) queue.push(m4);
+
+    var rows = [];
+    var unassigned = 0;
+
+    for (var d4 = 0; d4 < days; d4++) {
+      var key = dateKeys[d4];
+      var cands = [];
+      for (var m5 = 0; m5 < n; m5++) if (available[d4][m5]) cands.push(m5);
+
+      var chosen = -1;
+      if (cands.length > 0) {
+        var remainingAvail = function (mi) {
+          var total = 0;
+          for (var k = d4; k < days; k++) if (available[k][mi]) total++;
+          return total;
+        };
+        var ranked = [];
+        for (var r1 = 0; r1 < cands.length; r1++) {
+          var mi = cands[r1];
+          var deficit = quotas[mi] - count[mi];
+          var elapsedAvail = 0;
+          for (var k2 = 0; k2 <= d4; k2++) if (available[k2][mi]) elapsedAvail++;
+          var pace = caps[mi] > 0 ? quotas[mi] * elapsedAvail / caps[mi] : 0;
+          var remAvail = remainingAvail(mi);
+          ranked.push({
+            index: mi,
+            // 今天不减就补不齐额度的人排最前
+            must: deficit > 0 && deficit >= remAvail ? 0 : 1,
+            // 时间不够宽裕的人（最多只能按“连值两天休一天”补班）先值
+            urgent: deficit > 0 && deficit > Math.ceil(remAvail * 2 / 3) ? 0 : 1,
+            // 已经连值两天的人尽量排后面，别连着第三天
+            third: streak[mi] >= 2 ? 1 : 0,
+            pace: pace - count[mi],
+            deficit: deficit,
+            streak: streak[mi],
+            order: queue.indexOf(mi)
+          });
+        }
+        ranked.sort(function (a, b) {
+          return cmpKey(
+            [a.must, a.urgent, a.third, -a.pace, -a.deficit, a.streak, a.order],
+            [b.must, b.urgent, b.third, -b.pace, -b.deficit, b.streak, b.order]
+          );
+        });
+        // 选中的人不能把后面的人逼到“排不满数”
+        var baseNeed = new Array(n);
+        for (var bi = 0; bi < n; bi++) baseNeed[bi] = quotas[bi] - count[bi];
+        chosen = -1;
+        for (var ri = 0; ri < ranked.length; ri++) {
+          var cand = ranked[ri].index;
+          var need2 = baseNeed.slice();
+          need2[cand]--;
+          if (canFinish(d4 + 1, days, available, need2)) {
+            chosen = cand;
+            break;
+          }
+        }
+        if (chosen < 0) chosen = ranked[0].index;
+      }
+
+      if (chosen >= 0) {
+        count[chosen]++;
+        streak[chosen] = streak[chosen] + 1;
+        var pos = queue.indexOf(chosen);
+        if (pos >= 0) queue.splice(pos, 1);
+        queue.push(chosen); // 轮转：值完轮到队尾
+      } else {
+        unassigned++;
+      }
+      for (var m6 = 0; m6 < n; m6++) if (m6 !== chosen) streak[m6] = 0;
+
+      var leaveNames = [];
+      for (var m7 = 0; m7 < n; m7++) {
+        if (!available[d4][m7]) leaveNames.push(members[m7].name);
+      }
+
+      rows.push({
+        date: key,
+        memberIndex: chosen,
+        memberId: chosen >= 0 ? members[chosen].id : null,
+        name: chosen >= 0 ? members[chosen].name : '',
+        leaveNames: leaveNames
+      });
+    }
+
+    rebalance(rows, available, days, members);
+
+    return {
+      start: dateKeys.length ? dateKeys[0] : startKey,
+      end: dateKeys.length ? dateKeys[dateKeys.length - 1] : startKey,
+      days: days,
+      rows: rows,
+      quotas: quotas,
+      assignable: assignable,
+      unassigned: unassigned
+    };
+  }
+
+  function countRows(rows, days, n) {
+    var count = new Array(n).fill(0);
+    for (var d = 0; d < days; d++) if (rows[d].memberIndex >= 0) count[rows[d].memberIndex]++;
+    return count;
+  }
+
+  function spreadOf(count, i, j) {
+    var mx = -Infinity;
+    var mn = Infinity;
+    for (var k = 0; k < count.length; k++) {
+      var v = count[k];
+      if (k === i) v--;
+      if (k === j) v++;
+      if (v > mx) mx = v;
+      if (v < mn) mn = v;
+    }
+    return mx - mn;
+  }
+
+  // 把第 day 天改成 to 值日，会不会造成连续三天
+  function makesThird(rows, days, day, to) {
+    return day > 0 && rows[day - 1].memberIndex === to &&
+      day + 1 < days && rows[day + 1].memberIndex === to;
+  }
+
+  function applyMove(rows, members, move) {
+    rows[move.day].memberIndex = move.to;
+    rows[move.day].memberId = members[move.to].id;
+    rows[move.day].name = members[move.to].name;
+  }
+
+  /*
+   * 收尾修正：把“值日天数最多的人”的某一天换给“最少的人”。
+   * 先试一步换班；一步换不动时，再试“最多 -> 次多 -> 最少”的两步换班。
+   * 换不动就停下（说明受请假天数限制，差距没法再小）。
+   */
+  function rebalance(rows, available, days, members) {
+    var n = members.length;
+    if (n < 2 || days < 2) return;
+    var limit = days * 4 + 20;
+
+    for (var round = 0; round < limit; round++) {
+      var count = countRows(rows, days, n);
+      var mx = Math.max.apply(null, count);
+      var mn = Math.min.apply(null, count);
+      var spreadNow = mx - mn;
+      if (spreadNow <= 1) return;
+
+      // 一步换班
+      var best = null;
+      for (var d1 = 0; d1 < days; d1++) {
+        var from = rows[d1].memberIndex;
+        if (from < 0 || count[from] !== mx) continue;
+        for (var to1 = 0; to1 < n; to1++) {
+          if (to1 === from || count[to1] !== mn || !available[d1][to1]) continue;
+          var spread1 = spreadOf(count, from, to1);
+          if (spread1 >= spreadNow) continue;
+          var third1 = makesThird(rows, days, d1, to1);
+          if (!best || spread1 < best.spread || (spread1 === best.spread && best.third && !third1)) {
+            best = { day: d1, to: to1, spread: spread1, third: third1 };
+          }
+        }
+      }
+      if (best) {
+        applyMove(rows, members, best);
+        continue;
+      }
+
+      // 两步换班：最多的人 -> 次多的人 -> 最少的人
+      var chain = null;
+      for (var d2 = 0; d2 < days && !chain; d2++) {
+        var from2 = rows[d2].memberIndex;
+        if (from2 < 0 || count[from2] !== mx) continue;
+        for (var mid = 0; mid < n && !chain; mid++) {
+          if (mid === from2 || count[mid] !== mx - 1 || !available[d2][mid]) continue;
+          var c2 = count.slice();
+          c2[from2]--;
+          c2[mid]++;
+          for (var d3 = 0; d3 < days && !chain; d3++) {
+            if (d3 === d2 || rows[d3].memberIndex !== mid) continue;
+            for (var poor = 0; poor < n; poor++) {
+              if (poor === mid || count[poor] !== mn || !available[d3][poor]) continue;
+              var c3 = c2.slice();
+              c3[mid]--;
+              c3[poor]++;
+              if (Math.max.apply(null, c3) - Math.min.apply(null, c3) < spreadNow) {
+                chain = [{ day: d2, to: mid }, { day: d3, to: poor }];
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (chain) {
+        applyMove(rows, members, chain[0]);
+        applyMove(rows, members, chain[1]);
+        continue;
+      }
+      return;
+    }
+  }
+
+  var api = {
+    toKey: toKey,
+    parseKey: parseKey,
+    isDateKey: isDateKey,
+    addDays: addDays,
+    todayKey: todayKey,
+    formatMD: formatMD,
+    onLeave: onLeave,
+    computeQuotas: computeQuotas,
+    buildSchedule: buildSchedule
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  } else {
+    root.DormSchedule = api;
+  }
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+/* 界面逻辑：成员、请假、生成排班、展示（数据存在浏览器 localStorage） */
+(function () {
+  'use strict';
+
+  var S = window.DormSchedule;
+  var STORAGE_KEY = 'dorm-clean-schedule-v1';
+  var MAX_DAYS = 366;
+  var DEFAULT_DAYS = 30;
+
+  var state = null;
+  var storageOk = true;
+  var messageTimer = null;
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  function uid() {
+    return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // ---------- 数据的读取、校验、保存 ----------
+  function defaultState() {
+    return {
+      members: [],
+      leaves: [],
+      config: { start: S.todayKey(), days: DEFAULT_DAYS },
+      schedule: null,
+      stale: false
+    };
+  }
+
+  function normalize(raw) {
+    var st = defaultState();
+    if (!raw || typeof raw !== 'object') return st;
+
+    if (Array.isArray(raw.members)) {
+      raw.members.forEach(function (m) {
+        if (m && typeof m.name === 'string' && m.name.trim()) {
+          st.members.push({ id: String(m.id || uid()), name: m.name.trim().slice(0, 12) });
+        }
+      });
+    }
+
+    if (Array.isArray(raw.leaves)) {
+      raw.leaves.forEach(function (l) {
+        if (l && l.memberId && S.isDateKey(l.start) && S.isDateKey(l.end) && l.start <= l.end) {
+          st.leaves.push({ id: String(l.id || uid()), memberId: String(l.memberId), start: l.start, end: l.end });
+        }
+      });
+    }
+    var ids = {};
+    st.members.forEach(function (m) { ids[m.id] = true; });
+    st.leaves = st.leaves.filter(function (l) { return ids[l.memberId]; });
+
+    if (raw.config) {
+      if (S.isDateKey(raw.config.start)) st.config.start = raw.config.start;
+      var d = parseInt(raw.config.days, 10);
+      if (d > 0) st.config.days = Math.min(MAX_DAYS, Math.max(1, d));
+    }
+
+    if (raw.schedule && Array.isArray(raw.schedule.rows) && raw.schedule.rows.length) {
+      var rows = [];
+      raw.schedule.rows.forEach(function (r) {
+        if (r && S.isDateKey(r.date)) {
+          rows.push({
+            date: r.date,
+            memberId: r.memberId || null,
+            name: typeof r.name === 'string' ? r.name : '',
+            leaveNames: Array.isArray(r.leaveNames) ? r.leaveNames : []
+          });
+        }
+      });
+      if (rows.length) {
+        st.schedule = { start: rows[0].date, days: rows.length, rows: rows };
+        st.stale = !!raw.stale;
+      }
+    }
+    if (!st.members.length) {
+      st.schedule = null;
+      st.stale = false;
+    }
+    return st;
+  }
+
+  function load() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (e) {
+      storageOk = false;
+    }
+    if (!raw) return defaultState();
+    try {
+      return normalize(JSON.parse(raw));
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  function save() {
+    if (!storageOk) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      storageOk = false;
+      say('浏览器不允许保存本地数据，刷新后数据会丢失。');
+    }
+  }
+
+  function say(text) {
+    var el = $('message');
+    if (!el) return;
+    el.textContent = text || '';
+    if (messageTimer) window.clearTimeout(messageTimer);
+    if (text) {
+      messageTimer = window.setTimeout(function () {
+        el.textContent = '';
+      }, 6000);
+    }
+  }
+
+  // ---------- 渲染 ----------
+  function renderMembers() {
+    var ul = $('memberList');
+    ul.innerHTML = '';
+    state.members.forEach(function (m) {
+      var li = document.createElement('li');
+      var name = document.createElement('span');
+      name.textContent = m.name;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '删除';
+      btn.setAttribute('data-remove-member', m.id);
+      li.appendChild(name);
+      li.appendChild(document.createTextNode(' '));
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    $('memberEmpty').hidden = state.members.length > 0;
+  }
+
+  function renderLeaveSelect() {
+    var sel = $('leaveMember');
+    var current = sel.value;
+    sel.innerHTML = '';
+    if (!state.members.length) {
+      var opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = '先添加成员';
+      sel.appendChild(opt);
+      sel.disabled = true;
+      return;
+    }
+    sel.disabled = false;
+    state.members.forEach(function (m) {
+      var o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.name;
+      sel.appendChild(o);
+    });
+    var exists = state.members.some(function (m) { return m.id === current; });
+    sel.value = exists ? current : state.members[0].id;
+  }
+
+  function memberName(id) {
+    for (var i = 0; i < state.members.length; i++) {
+      if (state.members[i].id === id) return state.members[i].name;
+    }
+    return '（已删除）';
+  }
+
+  function renderLeaves() {
+    var ul = $('leaveList');
+    ul.innerHTML = '';
+    var sorted = state.leaves.slice().sort(function (a, b) {
+      if (a.start !== b.start) return a.start < b.start ? -1 : 1;
+      return a.end < b.end ? -1 : 1;
+    });
+    sorted.forEach(function (l) {
+      var li = document.createElement('li');
+      var text = document.createElement('span');
+      text.textContent = memberName(l.memberId) + '：' + S.formatMD(l.start) + ' – ' + S.formatMD(l.end);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = '删除';
+      btn.setAttribute('data-remove-leave', l.id);
+      li.appendChild(text);
+      li.appendChild(document.createTextNode(' '));
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    $('leaveEmpty').hidden = sorted.length > 0;
+  }
+
+  function renderSchedule() {
+    var sched = state.schedule;
+    var table = $('scheduleTable');
+    var body = $('scheduleBody');
+    var info = $('scheduleInfo');
+    body.innerHTML = '';
+
+    if (!sched) {
+      table.hidden = true;
+      $('scheduleEmpty').hidden = false;
+      info.textContent = '';
+      return;
+    }
+
+    $('scheduleEmpty').hidden = true;
+    table.hidden = false;
+    info.textContent = '起始 ' + sched.start + '，共 ' + sched.rows.length + ' 天（' +
+      S.formatMD(sched.rows[0].date) + ' – ' + S.formatMD(sched.rows[sched.rows.length - 1].date) + '）';
+
+    var frag = document.createDocumentFragment();
+    sched.rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+      var tdDate = document.createElement('td');
+      tdDate.textContent = S.formatMD(r.date);
+      var tdName = document.createElement('td');
+      tdName.textContent = r.name || '无人可值日';
+      var tdNote = document.createElement('td');
+      tdNote.textContent = r.leaveNames && r.leaveNames.length ? r.leaveNames.join('、') + '请假' : '';
+      tr.appendChild(tdDate);
+      tr.appendChild(tdName);
+      tr.appendChild(tdNote);
+      frag.appendChild(tr);
+    });
+    body.appendChild(frag);
+  }
+
+  function computeStats() {
+    var counts = {};
+    var order = [];
+    if (state.schedule) {
+      state.schedule.rows.forEach(function (r) {
+        if (!r.memberId) return;
+        if (!counts[r.memberId]) {
+          counts[r.memberId] = { name: r.name || '（未知）', count: 0 };
+          order.push(r.memberId);
+        }
+        counts[r.memberId].count++;
+      });
+    }
+    var list = [];
+    state.members.forEach(function (m) {
+      var c = counts[m.id];
+      list.push({ name: m.name, count: c ? c.count : 0, removed: false });
+      if (c) delete counts[m.id];
+    });
+    order.forEach(function (id) {
+      if (counts[id]) {
+        list.push({ name: counts[id].name, count: counts[id].count, removed: true });
+        delete counts[id];
+      }
+    });
+    return list;
+  }
+
+  function renderStats() {
+    var ul = $('statsList');
+    var note = $('fairnessNote');
+    ul.innerHTML = '';
+    var stats = computeStats();
+    if (!state.schedule) {
+      note.textContent = '';
+      return;
+    }
+    stats.forEach(function (s) {
+      var li = document.createElement('li');
+      li.textContent = s.name + '：' + s.count + ' 天' + (s.removed ? '（已删除的成员）' : '');
+      ul.appendChild(li);
+    });
+    if (!stats.length) {
+      note.textContent = '';
+      return;
+    }
+    var vals = stats.map(function (s) { return s.count; });
+    var mx = Math.max.apply(null, vals);
+    var mn = Math.min.apply(null, vals);
+    var parts = ['最多 ' + mx + ' 天，最少 ' + mn + ' 天，相差 ' + (mx - mn) + ' 天。'];
+    if (mx - mn > 1) {
+      parts.push('超过 1 天：这段时间里有人请假较多，可值日天数不够均分，已经排到不能再平。');
+    }
+    if (state.schedule.rows.some(function (r) { return !r.memberId; })) {
+      parts.push('有几天全员请假，没有安排人。');
+    }
+    note.textContent = parts.join('');
+  }
+
+  function renderHint() {
+    var el = $('hint');
+    if (state.stale && state.schedule) {
+      el.textContent = '成员或请假有改动，点“生成排班”可以更新下面的表格。';
+    } else if (state.members.length && !state.schedule) {
+      el.textContent = '点“生成排班”生成表格。';
+    } else {
+      el.textContent = '';
+    }
+  }
+
+  function renderConfig() {
+    $('startDate').value = state.config.start;
+    $('daysInput').value = String(state.config.days);
+  }
+
+  function renderAll() {
+    renderConfig();
+    renderMembers();
+    renderLeaveSelect();
+    renderLeaves();
+    renderSchedule();
+    renderStats();
+    renderHint();
+  }
+
+  function changed() {
+    if (state.schedule) state.stale = true;
+    save();
+    renderHint();
+  }
+
+  // ---------- 操作 ----------
+  function addMember() {
+    var input = $('memberName');
+    var name = (input.value || '').trim();
+    if (!name) {
+      say('请输入室友姓名。');
+      input.focus();
+      return;
+    }
+    name = name.slice(0, 12);
+    var dup = state.members.some(function (m) { return m.name === name; });
+    if (dup) {
+      say('已经有叫“' + name + '”的成员了。');
+      return;
+    }
+    state.members.push({ id: uid(), name: name });
+    input.value = '';
+    save();
+    renderMembers();
+    renderLeaveSelect();
+    renderHint();
+    changed();
+    input.focus();
+  }
+
+  function removeMember(id) {
+    var m = null;
+    state.members = state.members.filter(function (x) {
+      if (x.id === id) {
+        m = x;
+        return false;
+      }
+      return true;
+    });
+    if (!m) return;
+    state.leaves = state.leaves.filter(function (l) { return l.memberId !== id; });
+    if (!state.members.length) {
+      state.schedule = null;
+      state.stale = false;
+      save();
+      renderAll();
+      say('成员都删掉了，排班表也清空了。');
+      return;
+    }
+    save();
+    renderMembers();
+    renderLeaveSelect();
+    renderLeaves();
+    renderStats();
+    changed();
+    say('已删除成员：' + m.name + '（他的请假记录也一起删了）');
+  }
+
+  function addLeave() {
+    var memberId = $('leaveMember').value;
+    var start = $('leaveStart').value;
+    var end = $('leaveEnd').value;
+    if (!state.members.length) {
+      say('请先添加成员。');
+      return;
+    }
+    if (!memberId) {
+      say('请选择请假的成员。');
+      return;
+    }
+    if (!S.isDateKey(start) || !S.isDateKey(end)) {
+      say('请填写请假的开始和结束日期。');
+      return;
+    }
+    if (end < start) {
+      say('结束日期不能早于开始日期。');
+      return;
+    }
+    state.leaves.push({ id: uid(), memberId: memberId, start: start, end: end });
+    save();
+    renderLeaves();
+    changed();
+    say('已添加请假：' + memberName(memberId) + ' ' + S.formatMD(start) + ' – ' + S.formatMD(end) + '，记得重新生成排班。');
+  }
+
+  function removeLeave(id) {
+    state.leaves = state.leaves.filter(function (l) { return l.id !== id; });
+    save();
+    renderLeaves();
+    changed();
+  }
+
+  function generate() {
+    if (!state.members.length) {
+      say('请先添加成员。');
+      return;
+    }
+    var startKey = $('startDate').value;
+    if (!S.isDateKey(startKey)) {
+      say('起始日期填写不正确。');
+      return;
+    }
+    var days = parseInt($('daysInput').value, 10);
+    if (!(days > 0)) days = DEFAULT_DAYS;
+    if (days > MAX_DAYS) days = MAX_DAYS;
+    $('daysInput').value = String(days);
+
+    state.config.start = startKey;
+    state.config.days = days;
+
+    var res = S.buildSchedule(state.members, state.leaves, startKey, days);
+    state.schedule = {
+      start: res.start,
+      days: res.days,
+      rows: res.rows.map(function (r) {
+        return { date: r.date, memberId: r.memberId, name: r.name, leaveNames: r.leaveNames };
+      })
+    };
+    state.stale = false;
+    save();
+    renderSchedule();
+    renderStats();
+    renderHint();
+
+    var unassigned = res.unassigned;
+    say(unassigned > 0
+      ? '已生成 ' + days + ' 天排班，其中 ' + unassigned + ' 天全员请假，没安排人。'
+      : '已生成 ' + days + ' 天排班。');
+    var table = $('scheduleTable');
+    if (table && table.scrollIntoView) {
+      table.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  // ---------- 事件 ----------
+  function bind() {
+    $('addMemberBtn').addEventListener('click', addMember);
+    $('memberName').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addMember();
+      }
+    });
+    $('memberList').addEventListener('click', function (e) {
+      var id = e.target && e.target.getAttribute && e.target.getAttribute('data-remove-member');
+      if (id) removeMember(id);
+    });
+    $('leaveList').addEventListener('click', function (e) {
+      var id = e.target && e.target.getAttribute && e.target.getAttribute('data-remove-leave');
+      if (id) removeLeave(id);
+    });
+    $('addLeaveBtn').addEventListener('click', addLeave);
+    $('generateBtn').addEventListener('click', generate);
+    $('startDate').addEventListener('change', function () {
+      var v = this.value;
+      if (!S.isDateKey(v)) {
+        say('起始日期填写不正确。');
+        this.value = state.config.start;
+        return;
+      }
+      state.config.start = v;
+      changed();
+    });
+    $('daysInput').addEventListener('change', function () {
+      var d = parseInt(this.value, 10);
+      if (!(d > 0)) {
+        this.value = String(state.config.days);
+        return;
+      }
+      if (d > MAX_DAYS) d = MAX_DAYS;
+      if (d < 1) d = 1;
+      this.value = String(d);
+      state.config.days = d;
+      changed();
+    });
+  }
+
+  function init() {
+    state = load();
+    renderAll();
+    bind();
+    if (!storageOk) {
+      say('这个浏览器不允许保存本地数据，刷新后数据会丢失。');
+    }
+    // 默认把请假日期填成今天，省得每次都点日历
+    var today = S.todayKey();
+    if (!$('leaveStart').value) $('leaveStart').value = today;
+    if (!$('leaveEnd').value) $('leaveEnd').value = today;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
