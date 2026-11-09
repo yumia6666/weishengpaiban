@@ -2,175 +2,535 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>寝室卫生排班</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f7f4">
+<title>寝室卫生排班 · 值日安排</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%A7%B9%3C/text%3E%3C/svg%3E">
 <style>
+  :root {
+    --bg: #eef4f1;
+    --card: #ffffff;
+    --ink: #10261f;
+    --ink-2: #37564c;
+    --muted: #77928a;
+    --line: #e3ede9;
+    --line-strong: #cfded8;
+    --accent: #0f9d76;
+    --accent-deep: #0a7a5b;
+    --accent-soft: #e5f7f0;
+    --amber-soft: #fdf1dd;
+    --danger: #d9534f;
+    --radius: 20px;
+    --radius-sm: 12px;
+    --shadow: 0 1px 2px rgba(16, 38, 31, .04), 0 12px 32px -12px rgba(16, 38, 31, .16);
+    --shadow-sm: 0 1px 2px rgba(16, 38, 31, .05), 0 4px 14px -8px rgba(16, 38, 31, .18);
+    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+
   body {
-    background: #fff;
-    color: #000;
-    margin: 12px;
-    font-size: 16px;
-    line-height: 1.5;
-    max-width: 760px;
+    font-family: var(--font);
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 620px at 88% -8%, #dff3ea 0%, rgba(223, 243, 234, 0) 62%),
+      radial-gradient(900px 520px at -10% 6%, #e8f0ff 0%, rgba(232, 240, 255, 0) 55%),
+      var(--bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    font-size: 15px;
+    line-height: 1.55;
   }
-  h1 {
-    font-size: 20px;
-    margin: 0 0 4px;
+
+  h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -.01em; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 72px; }
+
+  /* 顶栏 */
+  .top {
+    position: sticky; top: 0; z-index: 30;
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    background: rgba(244, 249, 246, .82);
+    border-bottom: 1px solid rgba(16, 38, 31, .06);
   }
-  h2 {
-    font-size: 17px;
-    margin: 22px 0 6px;
+  .top-inner {
+    max-width: 1180px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; gap: 14px;
   }
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin: 6px 0;
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+  .logo {
+    width: 42px; height: 42px; flex: none; border-radius: 14px;
+    display: grid; place-items: center; font-size: 20px;
+    background: linear-gradient(150deg, #1fb98d, #0a7a5b);
+    color: #fff; box-shadow: 0 6px 16px -6px rgba(15, 157, 118, .7);
   }
-  .row label {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
+  .brand h1 { font-size: 17px; line-height: 1.2; }
+  .brand .sub { margin: 2px 0 0; font-size: 12px; color: var(--muted); letter-spacing: .01em; }
+  .top-actions { display: flex; gap: 8px; flex: none; }
+
+  /* 按钮 */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 38px; padding: 0 15px; border-radius: 11px;
+    border: 1px solid var(--line-strong); background: #fff; color: var(--ink-2);
+    font-size: 13.5px; font-weight: 600; white-space: nowrap;
+    transition: transform .12s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
   }
-  input[type="text"] {
-    width: 7em;
-    max-width: 40vw;
+  .btn:hover { border-color: #b9d3c9; box-shadow: var(--shadow-sm); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.primary {
+    background: linear-gradient(180deg, #17ab81, #0b8a67);
+    border-color: #0b8a67; color: #fff;
+    box-shadow: 0 8px 20px -10px rgba(15, 157, 118, .9);
   }
-  input[type="date"] {
-    max-width: 46vw;
+  .btn.primary:hover { filter: brightness(1.04); }
+  .btn.ghost { background: rgba(255, 255, 255, .6); }
+  .btn.sm { height: 32px; padding: 0 11px; border-radius: 9px; font-size: 12.5px; }
+  .btn.block { width: 100%; }
+
+  /* Hero */
+  .hero {
+    position: relative; overflow: hidden;
+    margin: 22px 0 18px; padding: 26px 28px;
+    border-radius: 26px;
+    background: linear-gradient(135deg, #ffffff 0%, #f2fbf7 55%, #eaf6ff 100%);
+    border: 1px solid rgba(255, 255, 255, .9);
+    box-shadow: var(--shadow);
+    display: flex; flex-wrap: wrap; gap: 26px; align-items: center; justify-content: space-between;
   }
-  input[type="number"] {
-    width: 5em;
+  .hero::after {
+    content: ""; position: absolute; right: -70px; top: -90px; width: 280px; height: 280px;
+    background: radial-gradient(circle at 35% 35%, rgba(23, 171, 129, .26), rgba(23, 171, 129, 0) 68%);
+    border-radius: 50%; pointer-events: none;
   }
-  select {
-    max-width: 40vw;
+  .hero-main { position: relative; z-index: 1; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 700; letter-spacing: .14em;
+    color: var(--accent-deep); background: var(--accent-soft); border-radius: 999px;
+    padding: 5px 12px;
   }
-  ul {
-    margin: 4px 0;
-    padding-left: 22px;
+  .eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: block; }
+  .hero-range { font-size: clamp(26px, 3.4vw, 38px); font-weight: 800; letter-spacing: -.03em; margin: 12px 0 4px; font-variant-numeric: tabular-nums; }
+  .hero-range span { font-size: .48em; font-weight: 600; color: var(--muted); margin: 0 8px; letter-spacing: 0; vertical-align: 4px; }
+  .hero-meta { color: var(--muted); font-size: 13.5px; margin: 0; }
+  .hero-meta b { color: var(--ink-2); font-weight: 700; }
+
+  .hero-stats { position: relative; z-index: 1; display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat {
+    min-width: 108px; padding: 12px 16px; border-radius: 16px;
+    background: rgba(255, 255, 255, .78); border: 1px solid #fff;
+    box-shadow: var(--shadow-sm);
   }
-  li {
-    margin: 4px 0;
-    word-break: break-word;
+  .stat .k { font-size: 11.5px; color: var(--muted); letter-spacing: .06em; }
+  .stat .v { font-size: 21px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .stat.today .v { color: var(--accent-deep); }
+
+  /* 布局 */
+  .layout { display: grid; grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    padding: 20px 20px 18px;
   }
-  table {
-    border-collapse: collapse;
-    table-layout: fixed;
-    width: 100%;
-    max-width: 560px;
-    margin: 6px 0;
+  .card + .card { margin-top: 16px; }
+  .card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .card-head h2 { font-size: 15.5px; }
+  .card-head .hint { font-size: 11.5px; color: var(--muted); margin-left: auto; text-align: right; }
+  .card-head .count {
+    font-size: 11.5px; font-weight: 700; color: var(--accent-deep);
+    background: var(--accent-soft); border-radius: 999px; padding: 2px 9px;
   }
-  th, td {
-    border: 1px solid #000;
-    padding: 4px 6px;
-    text-align: left;
-    vertical-align: top;
-    font-weight: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
+
+  /* 日历 */
+  .cal-month + .cal-month { margin-top: 22px; }
+  .cal-month-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .08em;
+    margin: 0 0 10px;
   }
-  th {
-    font-weight: bold;
+  .cal-month-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; }
+  .cal-head span {
+    text-align: center; font-size: 11.5px; font-weight: 700; color: var(--muted);
+    letter-spacing: .04em; padding-bottom: 2px;
   }
-  .note {
-    margin: 4px 0;
+  .cal-head span.we { color: #b4803a; }
+  .cal-blank { min-height: 74px; border-radius: var(--radius-sm); background: rgba(16, 38, 31, .018); }
+
+  .day {
+    position: relative; min-height: 74px; padding: 7px 7px 6px;
+    border-radius: var(--radius-sm); border: 1px solid var(--line);
+    background: #fcfefd; display: flex; flex-direction: column; gap: 3px;
+    transition: transform .14s ease, box-shadow .18s ease, border-color .18s ease;
+    cursor: default; overflow: hidden;
   }
-  #message {
-    margin: 16px 0 0;
-    min-height: 1.5em;
+  .day:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: #cfe3db; z-index: 2; }
+  .day .dnum { font-size: 13px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .day.is-today { border-color: var(--accent); background: linear-gradient(180deg, #f3fdf9, #eafaf4); box-shadow: 0 0 0 1px rgba(15, 157, 118, .18); }
+  .day.is-today .dnum::after {
+    content: "今天"; font-size: 9.5px; font-weight: 700; color: #fff; background: var(--accent);
+    border-radius: 999px; padding: 1px 5px; margin-left: 4px; vertical-align: 1px; letter-spacing: .02em;
   }
-  textarea {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 560px;
-    margin: 4px 0;
-    font-family: inherit;
-    font-size: 14px;
+  .day.is-empty { background: repeating-linear-gradient(135deg, #fafcfb, #fafcfb 6px, #f4f8f6 6px, #f4f8f6 12px); }
+  .day.is-empty .who { color: var(--muted); font-weight: 600; }
+  .day .who {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12.5px; font-weight: 700; color: var(--ink);
+    line-height: 1.25; min-height: 17px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  /* 窄屏：一行只放一个输入项，避免右侧被截断 */
-  @media (max-width: 560px) {
-    .row label {
-      flex: 1 1 100%;
-    }
-    input[type="text"],
-    input[type="date"],
-    input[type="number"],
-    select {
-      max-width: none;
-    }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .day .who span { overflow: hidden; text-overflow: ellipsis; }
+  .day .tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
+  .tag {
+    font-size: 9.5px; font-weight: 600; line-height: 1.4; padding: 1px 5px; border-radius: 5px;
+    background: var(--amber-soft); color: #9a6414; white-space: nowrap; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* 成员 */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; max-width: 100%;
+    padding: 6px 8px 6px 10px; border-radius: 999px;
+    background: #f7fbf9; border: 1px solid var(--line);
+    font-size: 13px; font-weight: 600; color: var(--ink-2);
+  }
+  .chip .nm { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip .x {
+    width: 20px; height: 20px; border-radius: 50%; border: 0; padding: 0;
+    background: transparent; color: var(--muted); font-size: 14px; line-height: 1;
+    display: grid; place-items: center; transition: background .15s, color .15s;
+  }
+  .chip .x:hover { background: #fbe9e7; color: var(--danger); }
+
+  /* 表单 */
+  .field { margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field > label { display: block; font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: .05em; margin-bottom: 5px; }
+  .input-row { display: flex; gap: 15px; }
+  .input-row .field { flex: 1; min-width: 0; }
+  input[type="text"], input[type="date"], input[type="number"], input[type="password"], select, textarea {
+    width: 100%; font: inherit; font-size: 13.5px; color: var(--ink);
+    background: #fbfdfc; border: 1px solid var(--line-strong); border-radius: 10px;
+    padding: 9px 11px; height: 38px; transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  textarea { height: auto; min-height: 76px; resize: vertical; font-size: 12.5px; line-height: 1.5; }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--accent); background: #fff;
+    box-shadow: 0 0 0 3px rgba(15, 157, 118, .14);
+  }
+  select { appearance: none; -webkit-appearance: none; padding-right: 30px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2377928a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center;
+  }
+  .inline-form { display: flex; gap: 8px; }
+  .inline-form input { flex: 1; min-width: 0; }
+  .inline-form .btn { flex: none; }
+
+  /* 列表 */
+  .empty {
+    margin: 0; padding: 14px; border-radius: var(--radius-sm);
+    background: #f7fbf9; border: 1px dashed var(--line-strong);
+    color: var(--muted); font-size: 12.5px; text-align: center;
+  }
+  .leave-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+  .leave-list li {
+    display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2);
+    background: #fbfdfc; border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px 7px 10px;
+  }
+  .leave-list .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .icon-btn {
+    flex: none; width: 26px; height: 26px; border-radius: 8px; border: 0; padding: 0;
+    background: transparent; color: var(--muted); display: grid; place-items: center;
+    font-size: 15px; line-height: 1; transition: background .15s, color .15s;
+  }
+  .icon-btn:hover { background: #fbe9e7; color: var(--danger); }
+
+  /* 统计 */
+  .bar-list { display: grid; gap: 11px; }
+  .bar-row { display: grid; grid-template-columns: 5.2em 1fr 2.6em; align-items: center; gap: 10px; font-size: 13px; }
+  .bar-row .nm { color: var(--ink-2); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-row .nm em { font-style: normal; color: var(--muted); font-weight: 500; font-size: 11px; }
+  .track { height: 8px; border-radius: 999px; background: #eef5f2; overflow: hidden; }
+  .fill { display: block; height: 100%; border-radius: 999px; transition: width .5s cubic-bezier(.22, 1, .36, 1); }
+  .bar-row .n { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .bar-row .n small { font-weight: 600; font-size: 10.5px; color: var(--muted); margin-left: 1px; }
+  .note { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin: 12px 0 0; }
+
+  /* 数据面板 */
+  details.data { margin-top: 16px; }
+  details.data > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    padding: 13px 16px; border-radius: 14px; background: #fff;
+    border: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--ink-2);
+    box-shadow: var(--shadow-sm);
+  }
+  details.data > summary::-webkit-details-marker { display: none; }
+  details.data > summary::after { content: "›"; margin-left: auto; color: var(--muted); font-size: 18px; transition: transform .2s; }
+  details.data[open] > summary::after { transform: rotate(90deg); }
+  details.data .body { padding: 14px 2px 0; }
+  .io-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .io-hint { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; min-height: 17px; }
+
+  /* 提示条 */
+  .banner {
+    display: none; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding: 10px 14px; border-radius: 12px;
+    background: #fff8e8; border: 1px solid #f4e0b8; color: #8a5d10; font-size: 12.5px;
+  }
+  .banner.show { display: flex; }
+  .banner .btn { margin-left: auto; background: #fff; border-color: #eccf9b; color: #8a5d10; }
+  .banner.cloudbar { background: #fdeceb; border-color: #f3c9c5; color: #b04441; }
+  .banner.cloudbar .btn { border-color: #f3c9c5; color: #b04441; }
+  .banner.cloudbar span { white-space: pre-wrap; }
+
+  /* Toast */
+  #toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 16px);
+    max-width: min(92vw, 520px); padding: 11px 18px; border-radius: 12px;
+    background: rgba(16, 38, 31, .93); color: #f2fbf7; font-size: 13px; line-height: 1.5;
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .5);
+    opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 80;
+    text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  body.embed .wrap { padding-bottom: 24px; }
+  body.embed .top-actions, body.embed details.data { display: none; }
+  body.embed .hero { margin-top: 16px; }
+
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .layout aside { order: 2; }
+  }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 0 13px 60px; }
+    .top-inner { padding: 11px 13px; gap: 10px; }
+    .logo { width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+    .brand h1 { font-size: 15.5px; }
+    .brand .sub { display: none; }
+    .btn { height: 36px; padding: 0 12px; }
+    .hero { padding: 20px 18px; gap: 16px; margin: 14px 0; border-radius: 20px; }
+    .hero-stats { width: 100%; }
+    .stat { flex: 1; min-width: 0; padding: 10px 12px; }
+    .stat .v { font-size: 18px; }
+    .card { padding: 16px 14px; border-radius: 16px; }
+    .cal-grid { gap: 4px; }
+    .day, .cal-blank { min-height: 60px; }
+    .day { padding: 5px 5px 4px; border-radius: 9px; }
+    .day .dnum { font-size: 11.5px; }
+    .day .who { font-size: 11px; }
+    .day .who .dot { display: none; }
+    .day .tag { font-size: 8.5px; padding: 0 4px; }
+    .bar-row { grid-template-columns: 4.4em 1fr 2.4em; gap: 8px; font-size: 12.5px; }
+    #toast { bottom: 16px; }
+  }
+
+  @media (max-width: 400px) {
+    .day .who { font-size: 10px; }
+    .cal-head span { font-size: 10px; }
+    .hero-range { font-size: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---------- 密码入口 ---------- */
+  #gate {
+    min-height: 100vh; display: grid; place-items: center; padding: 24px 18px;
+  }
+  .gate-card {
+    width: min(390px, 100%); padding: 30px 26px 26px; text-align: center;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 26px; box-shadow: var(--shadow);
+  }
+  .gate-card .logo { margin: 0 auto 16px; width: 46px; height: 46px; font-size: 21px; }
+  .gate-card h1 { font-size: 19px; }
+  .gate-sub { margin: 7px 0 20px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  .gate-form { display: flex; gap: 8px; }
+  .gate-form input { flex: 1; min-width: 0; height: 44px; font-size: 14px; }
+  .gate-form .btn { height: 44px; flex: none; padding: 0 18px; }
+  .gate-msg { min-height: 19px; margin: 10px 0 0; font-size: 12.5px; color: var(--danger); }
+  .gate-actions { margin-top: 6px; }
+  .gate-diag {
+    margin: 12px 0 0; padding: 10px 12px; text-align: left;
+    white-space: pre-wrap; word-break: break-word;
+    font-size: 11.5px; line-height: 1.6; color: var(--ink-2);
+    background: #f7fbf9; border: 1px solid var(--line); border-radius: 12px;
   }
 </style>
 </head>
 <body>
 
-<h1>寝室卫生排班</h1>
-<p class="note" id="dataNote">
-  数据只保存在“当前这个浏览器”里：换手机、换浏览器、或换网址（本地文件 ↔ 网上地址）打开都是空的，这是正常现象。
-  要让室友看到同样的名单和排班，用页面最下面的“生成分享链接”。
-</p>
-<noscript><p class="note">这个页面需要浏览器打开 JavaScript 才能用。</p></noscript>
-
-<h2>成员管理</h2>
-<div class="row">
-  <input id="memberName" type="text" placeholder="室友姓名" maxlength="12" autocomplete="off">
-  <button id="addMemberBtn" type="button">添加</button>
+<div id="gate">
+  <div class="gate-card">
+    <div class="logo">室</div>
+    <h1>寝室卫生排班</h1>
+    <p class="gate-sub">数据存在腾讯云开发数据库里<br>请输入密码后进入</p>
+    <div class="gate-form">
+      <input id="pwInput" type="password" placeholder="密码" maxlength="32" autocomplete="current-password">
+      <button class="btn primary" id="pwBtn" type="button">进入</button>
+    </div>
+    <p class="gate-msg" id="pwMsg"></p>
+    <div class="gate-actions">
+      <button class="btn ghost sm" id="diagBtn" type="button">云端自检</button>
+    </div>
+    <pre class="gate-diag" id="diagOut" hidden></pre>
+  </div>
 </div>
-<p id="memberEmpty" class="note">还没有成员，先添加室友。</p>
-<ul id="memberList"></ul>
 
-<h2>排班设置</h2>
-<div class="row">
-  <label>起始日期 <input id="startDate" type="date"></label>
-  <label>天数 <input id="daysInput" type="number" min="1" max="366" step="1"></label>
+<div id="app" hidden>
+
+
+<div class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="logo">室</div>
+      <div>
+        <h1>寝室卫生排班</h1>
+        <p class="sub" id="topSub">数据存在本机浏览器 · 用分享链接同步给室友</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" type="button" data-act="share">分享</button>
+      <button class="btn primary" type="button" data-act="generate">生成排班</button>
+    </div>
+  </div>
 </div>
-<div class="row">
-  <button id="generateBtn" type="button">生成排班</button>
+
+<div class="wrap">
+  <div class="banner cloudbar" id="cloudBar" hidden>
+    <span id="cloudBarText"></span>
+    <button class="btn sm" type="button" id="cloudRetry">重试</button>
+  </div>
+  <div class="banner" id="banner">
+    <span>成员或请假有改动，点“重新生成”更新表格。</span>
+    <button class="btn sm" type="button" data-act="generate">重新生成</button>
+  </div>
+
+  <section class="hero">
+    <div class="hero-main">
+      <div class="eyebrow"><i></i><span id="heroEyebrow">本轮值日周期</span></div>
+      <div class="hero-range" id="heroRange">11.09 – 12.08</div>
+      <p class="hero-meta" id="heroMeta">共 30 天 · 5 位室友 · 人均 6 天</p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat today">
+        <div class="k">今日值日</div>
+        <div class="v" id="statToday">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">班次总数</div>
+        <div class="v" id="statTotal">0<small>天</small></div>
+      </div>
+      <div class="stat">
+        <div class="k">公平差</div>
+        <div class="v" id="statSpread">—</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="card">
+      <div class="card-head">
+        <h2>值日日历</h2>
+        <span class="hint" id="calHint"></span>
+      </div>
+      <div id="calendar"></div>
+    </section>
+
+    <aside>
+      <section class="card">
+        <div class="card-head">
+          <h2>室友</h2>
+          <span class="count" id="memberCount">0 人</span>
+        </div>
+        <div class="inline-form" style="margin-bottom:12px">
+          <input id="memberName" type="text" placeholder="输入姓名，回车添加" maxlength="12" autocomplete="off">
+          <button class="btn primary sm" type="button" data-act="addMember" style="height:38px">添加</button>
+        </div>
+        <div class="chips" id="memberChips"></div>
+        <p class="empty" id="memberEmpty">还没有室友，先添加一位吧。</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>请假</h2>
+          <span class="hint">请假当天自动跳过</span>
+        </div>
+        <div class="field">
+          <label for="leaveMember">成员</label>
+          <select id="leaveMember"></select>
+        </div>
+        <div class="input-row">
+          <div class="field">
+            <label for="leaveStart">开始</label>
+            <input id="leaveStart" type="date">
+          </div>
+          <div class="field">
+            <label for="leaveEnd">结束</label>
+            <input id="leaveEnd" type="date">
+          </div>
+        </div>
+        <button class="btn block" type="button" data-act="addLeave">添加请假</button>
+        <ul class="leave-list" id="leaveList"></ul>
+        <p class="empty" id="leaveEmpty" style="margin-top:10px">还没有请假记录。</p>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>排班设置</h2></div>
+        <div class="input-row">
+          <div class="field">
+            <label for="startDate">起始日期</label>
+            <input id="startDate" type="date">
+          </div>
+          <div class="field">
+            <label for="daysInput">天数</label>
+            <input id="daysInput" type="number" min="1" max="366" step="1">
+          </div>
+        </div>
+        <button class="btn primary block" type="button" data-act="generate">生成排班</button>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>累计值日</h2>
+          <span class="hint">目标：人人一样多</span>
+        </div>
+        <div class="bar-list" id="statsList"></div>
+        <p class="empty" id="statsEmpty">生成排班后显示统计。</p>
+        <p class="note" id="fairnessNote"></p>
+      </section>
+
+      <details class="data" id="dataPanel">
+        <summary>导出 · 导入 · 分享</summary>
+        <div class="body">
+          <textarea id="ioText" placeholder="导出的内容会出现在这里；导入时把内容或分享链接粘贴进来"></textarea>
+          <div class="io-actions">
+            <button class="btn sm" type="button" data-act="export">导出数据</button>
+            <button class="btn sm" type="button" data-act="import">导入数据</button>
+            <button class="btn sm" type="button" data-act="share">生成分享链接</button>
+            <button class="btn sm" type="button" data-act="reset" style="color:#b04441">清空</button>
+          </div>
+          <p class="io-hint" id="ioHint"></p>
+        </div>
+      </details>
+    </aside>
+  </div>
 </div>
-<p id="hint" class="note"></p>
 
-<h2>请假管理</h2>
-<div class="row">
-  <label>成员 <select id="leaveMember"></select></label>
-  <label>开始 <input id="leaveStart" type="date"></label>
-  <label>结束 <input id="leaveEnd" type="date"></label>
+<div id="toast" role="status" aria-live="polite"></div>
 </div>
-<div class="row">
-  <button id="addLeaveBtn" type="button">添加请假</button>
-</div>
-<p id="leaveEmpty" class="note">还没有请假记录。</p>
-<ul id="leaveList"></ul>
-
-<h2>排班表</h2>
-<p id="scheduleInfo" class="note"></p>
-<p id="scheduleEmpty" class="note">还没有排班，点上面的“生成排班”。</p>
-<table id="scheduleTable" hidden>
-  <colgroup>
-    <col style="width: 30%">
-    <col style="width: 24%">
-    <col style="width: 46%">
-  </colgroup>
-  <thead>
-    <tr><th>日期</th><th>值日</th><th>备注</th></tr>
-  </thead>
-  <tbody id="scheduleBody"></tbody>
-</table>
-
-<h2>累计值日天数</h2>
-<ul id="statsList"></ul>
-<p id="fairnessNote" class="note"></p>
-
-<h2>导出 · 导入 · 分享</h2>
-<div class="row">
-  <button id="exportBtn" type="button">导出数据</button>
-  <button id="importBtn" type="button">导入数据</button>
-  <button id="shareBtn" type="button">生成分享链接</button>
-</div>
-<textarea id="ioText" rows="3" placeholder="导出的内容会出现在这里；导入时把内容或分享链接粘贴进来"></textarea>
-<p id="ioHint" class="note"></p>
-
-<p id="message" role="status"></p>
+<!-- /#app -->
 
 <script>
 /* 寝室卫生排班 —— 核心算法（纯函数，不依赖 DOM，方便单独测试） */
@@ -643,40 +1003,299 @@
 })(typeof window !== 'undefined' ? window : this);
 </script>
 <script>
-/* 界面逻辑：成员、请假、生成排班、展示（数据存在浏览器 localStorage） */
+/* 云端存储封装：腾讯云开发 CloudBase
+ * - PG 模式环境：用 app.rdb()（PostgREST）读写一张表
+ * - 文档数据库环境：退回 app.database() 的集合 + 单个文档
+ */
+(function (root) {
+  'use strict';
+
+  var SDK_URLS = [
+    'https://static.cloudbase.net/cloudbase-js-sdk/3.11.0/cloudbase.full.js',
+    'https://static.cloudbase.net/cloudbase-js-sdk/2.32.0/cloudbase.full.js',
+    'https://static.cloudbase.net/cloudbase-js-sdk/2.10.0/cloudbase.full.js'
+  ];
+
+  var app = null;
+  var db = null;      // 文档数据库
+  var coll = null;
+  var rdb = null;     // PG / PostgREST
+  var mode = '';      // 'pg' | 'doc'
+  var cfg = {
+    envId: '',
+    collection: 'dorm_state',
+    table: 'dorm_state',
+    rowId: '',
+    docId: 'main'
+  };
+  var signedIn = false;
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error('加载失败：' + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function ensureSdk() {
+    if (root.cloudbase && root.cloudbase.init) return Promise.resolve(root.cloudbase);
+    var i = 0;
+    function next() {
+      if (i >= SDK_URLS.length) {
+        return Promise.reject(new Error('CloudBase JS SDK 加载失败，请检查网络或 CDN 是否可访问。'));
+      }
+      var url = SDK_URLS[i++];
+      return loadScript(url).then(function () {
+        if (root.cloudbase && root.cloudbase.init) return root.cloudbase;
+        return next();
+      }, next);
+    }
+    return next();
+  }
+
+  function authInstance(application) {
+    if (!application) return null;
+    if (typeof application.auth === 'function') return application.auth();
+    return application.auth || null;
+  }
+
+  // SDK v1 用 anonymousAuthProvider().signIn()，v2/v3 用 signInAnonymously()
+  function signIn(application) {
+    var auth = authInstance(application);
+    if (!auth) return Promise.reject(new Error('SDK 里没有 auth 模块'));
+    if (typeof auth.signInAnonymously === 'function') {
+      return Promise.resolve(auth.signInAnonymously()).then(function (res) {
+        if (res && res.error) throw new Error(describe(res.error));
+        return auth;
+      });
+    }
+    if (typeof auth.anonymousAuthProvider === 'function') {
+      return Promise.resolve(auth.anonymousAuthProvider().signIn()).then(function () {
+        return auth;
+      });
+    }
+    return Promise.reject(new Error('当前 SDK 版本不支持匿名登录'));
+  }
+
+  function init(config) {
+    if (config) {
+      cfg = {
+        envId: config.envId,
+        collection: config.collection || cfg.collection,
+        table: config.table || cfg.table,
+        rowId: config.rowId || cfg.rowId,
+        docId: config.docId || 'main'
+      };
+    }
+    return ensureSdk()
+      .then(function (sdk) {
+        var opts = { env: cfg.envId };
+        if (cfg.region) opts.region = cfg.region;
+        app = sdk.init(opts);
+        return signIn(app);
+      })
+      .then(function () {
+        signedIn = true;
+        if (typeof app.rdb === 'function') {
+          mode = 'pg';
+          rdb = app.rdb();
+        } else {
+          mode = 'doc';
+          db = app.database();
+          coll = db.collection(cfg.collection);
+        }
+        return { mode: mode };
+      });
+  }
+
+  function getMode() {
+    return mode;
+  }
+
+  // ---------- 读 ----------
+  function load() {
+    if (!signedIn) return Promise.reject(new Error('还没连接云端'));
+    if (mode === 'pg') {
+      return Promise.resolve(rdb.from(cfg.table).select('*').eq('id', cfg.rowId)).then(function (res) {
+        if (res && res.error) throw res.error;
+        var rows = (res && res.data) || [];
+        if (!rows.length) return null;
+        var payload = rows[0].content;
+        if (typeof payload === 'string') return payload;
+        if (payload) return JSON.stringify(payload);
+        return null;
+      });
+    }
+    return Promise.resolve(coll.doc(cfg.docId).get()).then(function (res) {
+      var doc = pickDoc(res);
+      if (!doc) return null;
+      if (typeof doc.payload === 'string') return doc.payload;
+      if (doc.payload) return JSON.stringify(doc.payload);
+      return null;
+    }).catch(function (err) {
+      if (isDocumentMissing(err)) return null;
+      throw err;
+    });
+  }
+
+  // ---------- 写 ----------
+  function save(payload) {
+    if (!signedIn) return Promise.reject(new Error('还没连接云端'));
+    if (mode === 'pg') {
+      var row = { id: cfg.rowId, content: payload };
+      return Promise.resolve(rdb.from(cfg.table).upsert(row)).then(function (res) {
+        if (res && res.error) throw res.error;
+        return true;
+      });
+    }
+    var data = { key: cfg.docId, payload: payload, updatedAt: new Date() };
+    return Promise.resolve(coll.doc(cfg.docId).set(data)).then(function () {
+      return true;
+    });
+  }
+
+  function pickDoc(res) {
+    if (!res) return null;
+    var d = res.data;
+    if (Array.isArray(d)) return d.length ? d[0] : null;
+    if (d && typeof d === 'object') return d;
+    return null;
+  }
+
+  function isDocumentMissing(err) {
+    if (!err) return false;
+    var text = [err.code, err.errCode, err.message, err.error_description, err.error].join(' ');
+    return /DOCUMENT_NOT_EXIST|DOC_NOT_EXIST|not exist|does not exist|-502004|DATABASE_DOCUMENT_NOT_EXIST/i.test(text);
+  }
+
+  function describe(err) {
+    if (!err) return '未知错误';
+    if (typeof err === 'string') return err;
+    var parts = [];
+    if (err.status) parts.push(String(err.status));
+    if (err.statusText) parts.push(err.statusText);
+    if (err.code) parts.push(err.code);
+    if (err.message) parts.push(err.message);
+    if (err.error_description) parts.push(err.error_description);
+    if (err.details) parts.push(err.details);
+    if (err.hint) parts.push(err.hint);
+    if (err.error && typeof err.error === 'string') parts.push(err.error);
+    if (err.helpMessage) parts.push(err.helpMessage);
+    if (!parts.length) {
+      try { parts.push(JSON.stringify(err).slice(0, 300)); } catch (e) { parts.push(String(err)); }
+    }
+    return parts.join(' / ');
+  }
+
+  // 把常见错误翻译成“下一步该干什么”
+  function explain(err) {
+    var raw = describe(err);
+    var t = raw.toLowerCase();
+    var origin = root.location ? root.location.origin : '';
+    var hint = '';
+    if (/pgrst204|column .* not found|could not find the .* column/.test(t)) {
+      hint = '数据表结构不对（缺 payload 等列）。在控制台 SQL 编辑器里执行我给的那段建表 SQL 即可。';
+    } else if (/pgrst205|relation .* does not exist|undefined table|42p01/.test(t)) {
+      hint = '数据库里还没有这张表。把建表 SQL 在控制台 SQL 编辑器里执行一次。';
+    } else if (/permission denied|42501|rls|insufficient privilege/.test(t)) {
+      hint = '表权限不足：需要 GRANT 给 anon/authenticated，并放行 RLS 策略（建表 SQL 里已包含）。';
+    } else if (/missing_credentials|401|jwt|unauthenticated/.test(t)) {
+      hint = '没拿到访问凭据。请确认匿名登录已开启，并刷新页面重新进入。';
+    } else if (/postgres|document database instance|executepgsql/.test(t)) {
+      hint = '这个环境没有文档数据库。现在的版本会自动走 PostgreSQL（app.rdb()），如果仍报这条，说明 SDK 版本太旧。';
+    } else if (/login_type_disabled|登录方式未开启|匿名登录/.test(t)) {
+      hint = '这个环境还没开启「匿名登录」。去控制台 → 身份认证 / 登录授权 → 打开「匿名登录」，再刷新本页。';
+    } else if (/invalid_env|env not exists/.test(t)) {
+      hint = '环境 ID 不对或环境不存在，请核对控制台「环境概览」里的环境 ID。';
+    } else if (/invalid_domain|安全域名|安全来源|100004|failed to fetch|unreachable/.test(t)) {
+      if (!origin || origin === 'null' || origin.indexOf('file:') === 0) {
+        hint = '本地直接双击打开（file://）时云端请求会被拒。请改用线上 https 地址打开，并把该域名加进「安全来源」。';
+      } else {
+        hint = '当前网址不在「安全来源列表」里。控制台 → 环境配置 → 安全来源，把 ' + origin + ' 加进去。';
+      }
+    } else if (/collection.*not\s*exist|502005|集合不存在|database_collection_not_exist/.test(t)) {
+      hint = '这个环境没有文档数据库集合；如果是 PG 环境，请改用 PostgreSQL 表（建表 SQL）。';
+    }
+    if (raw.length > 260) raw = raw.slice(0, 260) + '…';
+    return { hint: hint, raw: raw };
+  }
+
+  root.DormCloud = {
+    init: init,
+    load: load,
+    save: save,
+    describe: describe,
+    explain: explain,
+    getMode: getMode,
+    isReady: function () { return signedIn; }
+  };
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+/* 界面逻辑：密码进入 → 云端读写 → 渲染（设计与样式来自 值日排班.docx） */
 (function () {
   'use strict';
 
-  var S = window.DormSchedule;
-  var STORAGE_KEY = 'dorm-clean-schedule-v1';
+  var C = window.DormSchedule;
+  var CL = window.DormCloud;
+
+  // ================= 可改配置 =================
+  var CONFIG = {
+    envId: 'pleasant-tiger-d8gt21vco6778544e',   // CloudBase 环境 ID
+    region: '',                                  // 留空=默认上海；广州填 ap-guangzhou
+    table: 'dorm_state',                         // PG 环境用的表（已存在，匿名可读写）
+    rowId: '11111111-1111-4111-8111-111111111111', // 表里固定存这一行
+    collection: 'dorm_state',                    // 文档数据库环境用的集合名
+    docId: 'main',                               // 文档数据库环境里的文档 ID
+    password: 'weisheng2026'                     // 进入密码
+  };
+  // ===========================================
+
   var MAX_DAYS = 366;
   var DEFAULT_DAYS = 30;
+  var LEGACY_KEY = 'dorm-clean-schedule-v1';
+  var COLORS = ['#0f9d76', '#4c7cf3', '#d96b9a', '#ef8f2f', '#7c5cf0', '#0ea5e9', '#c9a227', '#2f8f6f'];
 
-  var state = null;
-  var storageOk = true;
-  var messageTimer = null;
-
-  function $(id) {
-    return document.getElementById(id);
-  }
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
 
   function uid() {
     return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  // ---------- 数据的读取、校验、保存 ----------
-  function defaultState() {
+  /* ============================================================
+     数据层：成员 / 请假 / 设置 / 排班，读写都走 CloudBase
+     ============================================================ */
+  function Store() {
+    this.listeners = [];
+    this.state = this.defaultState();
+    this.syncText = '';
+    this.cloudReady = false;
+    this.saveTimer = null;
+    this.saving = false;
+    this.pending = false;
+  }
+
+  Store.prototype.defaultState = function () {
     return {
       members: [],
       leaves: [],
-      config: { start: S.todayKey(), days: DEFAULT_DAYS },
+      config: { start: C.todayKey(), days: DEFAULT_DAYS },
       schedule: null,
       stale: false
     };
-  }
+  };
 
-  function normalize(raw) {
-    var st = defaultState();
+  Store.prototype.normalize = function (raw) {
+    var st = this.defaultState();
     if (!raw || typeof raw !== 'object') return st;
 
     if (Array.isArray(raw.members)) {
@@ -689,7 +1308,7 @@
 
     if (Array.isArray(raw.leaves)) {
       raw.leaves.forEach(function (l) {
-        if (l && l.memberId && S.isDateKey(l.start) && S.isDateKey(l.end) && l.start <= l.end) {
+        if (l && l.memberId && C.isDateKey(l.start) && C.isDateKey(l.end) && l.start <= l.end) {
           st.leaves.push({ id: String(l.id || uid()), memberId: String(l.memberId), start: l.start, end: l.end });
         }
       });
@@ -699,7 +1318,7 @@
     st.leaves = st.leaves.filter(function (l) { return ids[l.memberId]; });
 
     if (raw.config) {
-      if (S.isDateKey(raw.config.start)) st.config.start = raw.config.start;
+      if (C.isDateKey(raw.config.start)) st.config.start = raw.config.start;
       var d = parseInt(raw.config.days, 10);
       if (d > 0) st.config.days = Math.min(MAX_DAYS, Math.max(1, d));
     }
@@ -707,7 +1326,7 @@
     if (raw.schedule && Array.isArray(raw.schedule.rows) && raw.schedule.rows.length) {
       var rows = [];
       raw.schedule.rows.forEach(function (r) {
-        if (r && S.isDateKey(r.date)) {
+        if (r && C.isDateKey(r.date)) {
           rows.push({
             date: r.date,
             memberId: r.memberId || null,
@@ -726,159 +1345,140 @@
       st.stale = false;
     }
     return st;
-  }
+  };
 
-  function load() {
-    var raw = null;
-    try {
-      raw = window.localStorage.getItem(STORAGE_KEY);
-    } catch (e) {
-      storageOk = false;
-    }
-    if (!raw) return defaultState();
-    try {
-      return normalize(JSON.parse(raw));
-    } catch (e) {
-      return defaultState();
-    }
-  }
+  Store.prototype.on = function (fn) {
+    this.listeners.push(fn);
+    return this;
+  };
 
-  function save() {
-    if (!storageOk) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
-      storageOk = false;
-      say('浏览器不允许保存本地数据，刷新后数据会丢失。');
+  Store.prototype.emit = function (type, payload) {
+    for (var i = 0; i < this.listeners.length; i++) {
+      try {
+        this.listeners[i](type, payload);
+      } catch (e) { /* 一个监听器出错不影响别的 */ }
     }
-  }
+  };
 
-  function say(text) {
-    var el = $('message');
-    if (!el) return;
-    el.textContent = text || '';
-    if (messageTimer) window.clearTimeout(messageTimer);
-    if (text) {
-      messageTimer = window.setTimeout(function () {
-        el.textContent = '';
-      }, 6000);
-    }
-  }
+  Store.prototype.toast = function (text) {
+    this.emit('toast', text || '');
+  };
 
-  // ---------- 渲染 ----------
-  function renderMembers() {
-    var ul = $('memberList');
-    ul.innerHTML = '';
-    state.members.forEach(function (m) {
-      var li = document.createElement('li');
-      var name = document.createElement('span');
-      name.textContent = m.name;
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '删除';
-      btn.setAttribute('data-remove-member', m.id);
-      li.appendChild(name);
-      li.appendChild(document.createTextNode(' '));
-      li.appendChild(btn);
-      ul.appendChild(li);
+  Store.prototype.payloadString = function () {
+    return JSON.stringify({
+      v: 2,
+      members: this.state.members,
+      leaves: this.state.leaves,
+      config: this.state.config,
+      schedule: this.state.schedule,
+      stale: this.state.stale
     });
-    $('memberEmpty').hidden = state.members.length > 0;
-  }
+  };
 
-  function renderLeaveSelect() {
-    var sel = $('leaveMember');
-    var current = sel.value;
-    sel.innerHTML = '';
-    if (!state.members.length) {
-      var opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = '先添加成员';
-      sel.appendChild(opt);
-      sel.disabled = true;
-      return;
-    }
-    sel.disabled = false;
-    state.members.forEach(function (m) {
-      var o = document.createElement('option');
-      o.value = m.id;
-      o.textContent = m.name;
-      sel.appendChild(o);
+  // 改动后 400ms 再写云端，避免连点时反复写库
+  Store.prototype.save = function (immediate) {
+    var self = this;
+    if (!this.cloudReady) return Promise.resolve(false);
+    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+    if (immediate) return this.writeNow();
+    this.saveTimer = setTimeout(function () {
+      self.saveTimer = null;
+      self.writeNow();
+    }, 400);
+    return Promise.resolve(false);
+  };
+
+  Store.prototype.writeNow = function () {
+    var self = this;
+    if (!this.cloudReady) return Promise.resolve(false);
+    if (this.saving) { this.pending = true; return Promise.resolve(false); }
+    this.saving = true;
+    return CL.save(this.payloadString()).then(function () {
+      self.saving = false;
+      self.syncText = '已同步 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }).slice(0, 5);
+      self.hideCloudError();
+      self.emit('change');
+      if (self.pending) { self.pending = false; self.writeNow(); }
+      return true;
+    }, function (err) {
+      self.saving = false;
+      var e = CL.explain(err);
+      self.showCloudError('保存失败：' + (e.hint || e.raw));
+      return false;
     });
-    var exists = state.members.some(function (m) { return m.id === current; });
-    sel.value = exists ? current : state.members[0].id;
-  }
+  };
 
-  function memberName(id) {
-    for (var i = 0; i < state.members.length; i++) {
-      if (state.members[i].id === id) return state.members[i].name;
-    }
+  Store.prototype.showCloudError = function (text) {
+    var bar = $('cloudBar');
+    if (!bar) return;
+    $('cloudBarText').textContent = text;
+    bar.hidden = false;
+  };
+
+  Store.prototype.hideCloudError = function () {
+    var bar = $('cloudBar');
+    if (bar) bar.hidden = true;
+  };
+
+  Store.prototype.boot = function () {
+    var self = this;
+    this.syncText = '连接云端…';
+    this.emit('change');
+    return CL.init(CONFIG).then(function () {
+      self.cloudReady = true;
+      return CL.load();
+    }).then(function (payload) {
+      if (payload) {
+        try {
+          self.state = self.normalize(JSON.parse(payload));
+        } catch (e) {
+          self.state = self.defaultState();
+        }
+        self.syncText = '云端已载入';
+        self.emit('change');
+        return true;
+      }
+      // 云端还没有数据：把本机旧版存的数据搬上去（只发生一次）
+      var legacy = null;
+      try {
+        legacy = window.localStorage.getItem(LEGACY_KEY);
+      } catch (e2) {
+        legacy = null;
+      }
+      if (legacy) {
+        try {
+          self.state = self.normalize(JSON.parse(legacy));
+        } catch (e3) {
+          self.state = self.defaultState();
+        }
+      }
+      self.syncText = '云端新建记录';
+      self.emit('change');
+      return self.save(true).then(function () {
+        if (legacy) self.toast('已把本机原来的名单上传到云端');
+      });
+    }).catch(function (err) {
+      var e = CL.explain(err);
+      self.cloudReady = false;
+      self.syncText = '云端未连接';
+      self.emit('change');
+      self.showCloudError('连接云端失败：' + (e.hint || e.raw));
+      self.toast('连不上云端，改动不会保存');
+    });
+  };
+
+  Store.prototype.memberName = function (id) {
+    var list = this.state.members;
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i].name;
     return '（已删除）';
-  }
+  };
 
-  function renderLeaves() {
-    var ul = $('leaveList');
-    ul.innerHTML = '';
-    var sorted = state.leaves.slice().sort(function (a, b) {
-      if (a.start !== b.start) return a.start < b.start ? -1 : 1;
-      return a.end < b.end ? -1 : 1;
-    });
-    sorted.forEach(function (l) {
-      var li = document.createElement('li');
-      var text = document.createElement('span');
-      text.textContent = memberName(l.memberId) + '：' + S.formatMDWeek(l.start) + ' – ' + S.formatMDWeek(l.end);
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = '删除';
-      btn.setAttribute('data-remove-leave', l.id);
-      li.appendChild(text);
-      li.appendChild(document.createTextNode(' '));
-      li.appendChild(btn);
-      ul.appendChild(li);
-    });
-    $('leaveEmpty').hidden = sorted.length > 0;
-  }
-
-  function renderSchedule() {
-    var sched = state.schedule;
-    var table = $('scheduleTable');
-    var body = $('scheduleBody');
-    var info = $('scheduleInfo');
-    body.innerHTML = '';
-
-    if (!sched) {
-      table.hidden = true;
-      $('scheduleEmpty').hidden = false;
-      info.textContent = '';
-      return;
-    }
-
-    $('scheduleEmpty').hidden = true;
-    table.hidden = false;
-    info.textContent = '起始 ' + sched.start + '，共 ' + sched.rows.length + ' 天（' +
-      S.formatMDWeek(sched.rows[0].date) + ' – ' + S.formatMDWeek(sched.rows[sched.rows.length - 1].date) + '）';
-
-    var frag = document.createDocumentFragment();
-    sched.rows.forEach(function (r) {
-      var tr = document.createElement('tr');
-      var tdDate = document.createElement('td');
-      tdDate.textContent = S.formatMDWeek(r.date);
-      var tdName = document.createElement('td');
-      tdName.textContent = r.name || '无人可值日';
-      var tdNote = document.createElement('td');
-      tdNote.textContent = r.leaveNames && r.leaveNames.length ? r.leaveNames.join('、') + '请假' : '';
-      tr.appendChild(tdDate);
-      tr.appendChild(tdName);
-      tr.appendChild(tdNote);
-      frag.appendChild(tr);
-    });
-    body.appendChild(frag);
-  }
-
-  function computeStats() {
+  Store.prototype.stats = function () {
+    var st = this.state;
     var counts = {};
     var order = [];
-    if (state.schedule) {
-      state.schedule.rows.forEach(function (r) {
+    if (st.schedule) {
+      st.schedule.rows.forEach(function (r) {
         if (!r.memberId) return;
         if (!counts[r.memberId]) {
           counts[r.memberId] = { name: r.name || '（未知）', count: 0 };
@@ -887,117 +1487,176 @@
         counts[r.memberId].count++;
       });
     }
+
+    var leaveDays = {};
+    if (st.schedule) {
+      var dates = st.schedule.rows.map(function (r) { return r.date; });
+      st.leaves.forEach(function (l) {
+        var n = 0;
+        for (var i = 0; i < dates.length; i++) if (dates[i] >= l.start && dates[i] <= l.end) n++;
+        if (n) leaveDays[l.memberId] = (leaveDays[l.memberId] || 0) + n;
+      });
+    }
+
     var list = [];
-    state.members.forEach(function (m) {
+    st.members.forEach(function (m) {
       var c = counts[m.id];
-      list.push({ name: m.name, count: c ? c.count : 0, removed: false });
+      list.push({ id: m.id, name: m.name, count: c ? c.count : 0, leaveDays: leaveDays[m.id] || 0, removed: false });
       if (c) delete counts[m.id];
     });
     order.forEach(function (id) {
       if (counts[id]) {
-        list.push({ name: counts[id].name, count: counts[id].count, removed: true });
+        list.push({ id: id, name: counts[id].name, count: counts[id].count, leaveDays: leaveDays[id] || 0, removed: true });
         delete counts[id];
       }
     });
-    return list;
-  }
 
-  function renderStats() {
-    var ul = $('statsList');
-    var note = $('fairnessNote');
-    ul.innerHTML = '';
-    var stats = computeStats();
-    if (!state.schedule) {
-      note.textContent = '';
-      return;
+    var vals = list.map(function (s) { return s.count; });
+    var max = vals.length ? Math.max.apply(null, vals) : 0;
+    var min = vals.length ? Math.min.apply(null, vals) : 0;
+    var total = 0;
+    if (st.schedule) total = st.schedule.rows.filter(function (r) { return !!r.memberId; }).length;
+    return { list: list, max: max, min: min, spread: max - min, total: total };
+  };
+
+  Store.prototype.fairnessText = function () {
+    var st = this.state;
+    if (!st.schedule) return '';
+    var s = this.stats();
+    if (!s.list.length) return '';
+    var parts = ['最多 ' + s.max + ' 天，最少 ' + s.min + ' 天，相差 ' + s.spread + ' 天。'];
+    if (s.spread > 1) parts.push('已经排到不能再平：请假多的人可值日天数不够均分。');
+    if (st.schedule.rows.some(function (r) { return !r.memberId; })) parts.push('有几天全员请假，没有安排人。');
+    return parts.join('');
+  };
+
+  Store.prototype.changed = function (markStale) {
+    if (markStale && this.state.schedule) this.state.stale = true;
+    this.emit('change');
+    this.save();
+  };
+
+  Store.prototype.addMember = function (name) {
+    name = String(name || '').trim().slice(0, 12);
+    if (!name) {
+      this.toast('请输入室友姓名');
+      return false;
     }
-    stats.forEach(function (s) {
-      var li = document.createElement('li');
-      li.textContent = s.name + '：' + s.count + ' 天' + (s.removed ? '（已删除的成员）' : '');
-      ul.appendChild(li);
+    var dup = this.state.members.some(function (m) { return m.name === name; });
+    if (dup) {
+      this.toast('已经有叫“' + name + '”的室友了');
+      return false;
+    }
+    this.state.members.push({ id: uid(), name: name });
+    this.changed(false);
+    return true;
+  };
+
+  Store.prototype.removeMember = function (id) {
+    var removed = null;
+    this.state.members = this.state.members.filter(function (m) {
+      if (m.id === id) {
+        removed = m;
+        return false;
+      }
+      return true;
     });
-    if (!stats.length) {
-      note.textContent = '';
-      return;
+    if (!removed) return false;
+    this.state.leaves = this.state.leaves.filter(function (l) { return l.memberId !== id; });
+    if (!this.state.members.length) {
+      this.state.schedule = null;
+      this.state.stale = false;
     }
-    var vals = stats.map(function (s) { return s.count; });
-    var mx = Math.max.apply(null, vals);
-    var mn = Math.min.apply(null, vals);
-    var parts = ['最多 ' + mx + ' 天，最少 ' + mn + ' 天，相差 ' + (mx - mn) + ' 天。'];
-    if (mx - mn > 1) {
-      parts.push('超过 1 天：这段时间里有人请假较多，可值日天数不够均分，已经排到不能再平。');
+    this.changed(!this.state.schedule ? false : true);
+    this.toast('已删除室友：' + removed.name);
+    return true;
+  };
+
+  Store.prototype.addLeave = function (memberId, start, end) {
+    if (!this.state.members.length) {
+      this.toast('先添加室友');
+      return false;
     }
-    if (state.schedule.rows.some(function (r) { return !r.memberId; })) {
-      parts.push('有几天全员请假，没有安排人。');
+    if (!memberId) {
+      this.toast('请选择请假的室友');
+      return false;
     }
-    note.textContent = parts.join('');
-  }
-
-  function renderHint() {
-    var el = $('hint');
-    if (state.stale && state.schedule) {
-      el.textContent = '成员或请假有改动，点“生成排班”可以更新下面的表格。';
-    } else if (state.members.length && !state.schedule) {
-      el.textContent = '点“生成排班”生成表格。';
-    } else {
-      el.textContent = '';
+    if (!C.isDateKey(start) || !C.isDateKey(end)) {
+      this.toast('请填写请假的开始和结束日期');
+      return false;
     }
-  }
+    if (end < start) {
+      this.toast('结束日期不能早于开始日期');
+      return false;
+    }
+    this.state.leaves.push({ id: uid(), memberId: memberId, start: start, end: end });
+    this.changed(true);
+    this.toast('已添加请假：' + this.memberName(memberId) + ' ' + C.formatMDWeek(start) + '–' + C.formatMDWeek(end));
+    return true;
+  };
 
-  function renderConfig() {
-    $('startDate').value = state.config.start;
-    $('daysInput').value = String(state.config.days);
-  }
+  Store.prototype.removeLeave = function (id) {
+    this.state.leaves = this.state.leaves.filter(function (l) { return l.id !== id; });
+    this.changed(true);
+    return true;
+  };
 
-  function renderAll() {
-    renderConfig();
-    renderMembers();
-    renderLeaveSelect();
-    renderLeaves();
-    renderSchedule();
-    renderStats();
-    renderHint();
-    $('dataNote').hidden = state.members.length > 0;
-  }
+  Store.prototype.generate = function () {
+    var st = this.state;
+    if (!st.members.length) {
+      this.toast('先添加室友再生成排班');
+      return false;
+    }
+    var days = parseInt(st.config.days, 10);
+    if (!(days > 0)) days = DEFAULT_DAYS;
+    days = Math.min(MAX_DAYS, days);
+    st.config.days = days;
 
-  function changed() {
-    if (state.schedule) state.stale = true;
-    save();
-    renderHint();
-  }
+    var res = C.buildSchedule(st.members, st.leaves, st.config.start, days);
+    st.schedule = {
+      start: res.start,
+      days: res.days,
+      rows: res.rows.map(function (r) {
+        return { date: r.date, memberId: r.memberId, name: r.name, leaveNames: r.leaveNames };
+      })
+    };
+    st.stale = false;
+    this.emit('change');
+    this.save(true);
+    this.toast(res.unassigned > 0
+      ? '已生成 ' + days + ' 天，其中 ' + res.unassigned + ' 天全员请假'
+      : '已生成 ' + days + ' 天排班');
+    return true;
+  };
 
-  // ---------- 导出 / 导入 / 分享链接 ----------
-  // 只带“成员 + 请假 + 设置”，排班表可以按同样设置重新算出来，链接也就短很多
-  function payloadString() {
-    return JSON.stringify({
-      v: 1,
-      members: state.members.map(function (m) {
-        return { id: m.id, name: m.name };
-      }),
-      leaves: state.leaves.map(function (l) {
-        return { memberId: l.memberId, start: l.start, end: l.end };
-      }),
-      config: { start: state.config.start, days: state.config.days }
-    });
-  }
+  Store.prototype.setStart = function (v) {
+    if (!C.isDateKey(v)) {
+      this.toast('起始日期不正确');
+      $('startDate').value = this.state.config.start;
+      return false;
+    }
+    this.state.config.start = v;
+    this.changed(true);
+    return true;
+  };
 
-  function b64encode(str) {
-    var bytes = new TextEncoder().encode(str);
-    var bin = '';
-    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
+  Store.prototype.setDays = function (v) {
+    var d = parseInt(v, 10);
+    if (!(d > 0)) {
+      this.toast('天数要大于 0');
+      $('daysInput').value = String(this.state.config.days);
+      return false;
+    }
+    d = Math.min(MAX_DAYS, d);
+    this.state.config.days = d;
+    $('daysInput').value = String(d);
+    this.changed(true);
+    return true;
+  };
 
-  function b64decode(str) {
-    var s = String(str).replace(/-/g, '+').replace(/_/g, '/');
-    while (s.length % 4) s += '=';
-    var bin = atob(s);
-    var bytes = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new TextDecoder().decode(bytes);
-  }
-
-  function applyPayload(text) {
+  Store.prototype.importText = function (text) {
+    text = String(text || '').trim();
+    if (!text) return false;
     var data = null;
     try {
       data = JSON.parse(text);
@@ -1005,266 +1664,390 @@
       return false;
     }
     if (!data || typeof data !== 'object' || !Array.isArray(data.members)) return false;
-    var next = normalize(data);
-    if (!next.members.length) return false;
-    state = next;
-    save();
-    renderAll();
+    this.state = this.normalize(data);
+    this.emit('change');
+    this.save(true);
     return true;
+  };
+
+  Store.prototype.shareLink = function () {
+    return location.href.split('#')[0];
+  };
+
+  Store.prototype.reset = function () {
+    this.state = this.defaultState();
+    this.emit('change');
+    this.save(true);
+    this.toast('已清空');
+  };
+
+  /* ============================================================
+     界面层：渲染 + 事件
+     ============================================================ */
+  var S = new Store();
+
+  function colorOf(memberId) {
+    var list = S.state.members;
+    for (var i = 0; i < list.length; i++) if (list[i].id === memberId) return COLORS[i % COLORS.length];
+    return '#9aa8a3';
   }
 
-  function exportData() {
-    var ta = $('ioText');
-    ta.value = payloadString();
-    ta.focus();
-    ta.select();
-    $('ioHint').textContent = '已经导出到下面文本框：复制保存下来，在别的设备上粘贴进来点“导入数据”即可。';
+  var toastTimer = null;
+  function toast(text) {
+    if (!text) return;
+    var el = $('toast');
+    el.textContent = text;
+    el.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 4200);
   }
 
-  function importData() {
-    var ta = $('ioText');
-    var text = (ta.value || '').trim();
-    if (!text) {
-      $('ioHint').textContent = '先把导出的内容或分享链接粘贴到下面的文本框里。';
+  function renderTop() {
+    var st = S.state;
+    var sched = st.schedule;
+    var stats = S.stats();
+    var tail = S.syncText ? ' · ' + S.syncText : '';
+    $('topSub').textContent = st.members.length
+      ? st.members.length + ' 位室友 · ' + (sched ? sched.rows.length + ' 天' : '未生成') + tail
+      : '还没有室友 · 先添加一位' + tail;
+
+    if (!sched) {
+      $('heroEyebrow').textContent = '还没有排班';
+      $('heroRange').innerHTML = '先添加室友<span>·</span>再生成';
+      $('heroMeta').textContent = st.members.length
+        ? '已有 ' + st.members.length + ' 位室友，设置起始日期和天数后点“生成排班”。'
+        : '在右侧添加室友姓名，设置起始日期和天数，一键生成公平排班。';
+      $('statToday').textContent = '—';
+      $('statTotal').innerHTML = '0<small>天</small>';
+      $('statSpread').textContent = '—';
+      $('calHint').textContent = '';
+      $('banner').classList.toggle('show', false);
       return;
     }
-    var hashAt = text.indexOf('#d=');
-    if (hashAt >= 0) {
-      try {
-        text = b64decode(text.slice(hashAt + 3));
-      } catch (e) {
-        text = '';
+
+    var rows = sched.rows;
+    $('heroEyebrow').textContent = '本轮值日周期';
+    $('heroRange').innerHTML = esc(C.formatMD(rows[0].date)) + '<span>–</span>' + esc(C.formatMD(rows[rows.length - 1].date));
+    var per = stats.list.length ? stats.total / stats.list.length : 0;
+    var perText = Math.abs(per - Math.round(per)) < 0.05 ? String(Math.round(per)) : per.toFixed(1);
+    $('heroMeta').innerHTML = '共 <b>' + rows.length + '</b> 天 · <b>' + st.members.length + '</b> 位室友 · 人均 <b>' + perText + '</b> 天';
+
+    var todayRow = null;
+    var today = C.todayKey();
+    for (var i = 0; i < rows.length; i++) if (rows[i].date === today) { todayRow = rows[i]; break; }
+    $('statToday').textContent = todayRow ? (todayRow.name || '全员请假') : '—';
+    $('statToday').title = todayRow ? C.formatMDWeek(todayRow.date) : '今天不在排班周期内';
+    $('statTotal').innerHTML = rows.length + '<small>天</small>';
+    $('statSpread').innerHTML = stats.list.length ? stats.spread + '<small>天</small>' : '—';
+    $('statSpread').title = stats.list.length ? ('最多 ' + stats.max + ' 天，最少 ' + stats.min + ' 天') : '';
+
+    $('calHint').textContent = C.formatMDWeek(rows[0].date) + ' 起';
+    $('banner').classList.toggle('show', !!st.stale);
+  }
+
+  function renderCalendar() {
+    var box = $('calendar');
+    var sched = S.state.schedule;
+    if (!sched) {
+      box.innerHTML = '<p class="empty">还没有排班，点上面的“生成排班”。</p>';
+      return;
+    }
+    var rows = sched.rows;
+    var today = C.todayKey();
+    var byMonth = [];
+    var current = null;
+    rows.forEach(function (r) {
+      var d = C.parseKey(r.date);
+      var key = d.getFullYear() + '-' + d.getMonth();
+      if (!current || current.key !== key) {
+        current = { key: key, year: d.getFullYear(), month: d.getMonth(), rows: [] };
+        byMonth.push(current);
       }
-    }
-    if (!text || !applyPayload(text)) {
-      $('ioHint').textContent = '这段内容认不出来，请确认是从本页面“导出”的文本或“生成分享链接”的链接。';
-      return;
-    }
-    $('ioHint').textContent = '导入成功：名单和请假已经换成对方那份，排班表按同样的设置生成了。';
-    generate();
+      current.rows.push(r);
+    });
+
+    var html = '';
+    byMonth.forEach(function (m) {
+      var firstDate = C.parseKey(m.rows[0].date);
+      var offset = (firstDate.getDay() + 6) % 7;
+      html += '<div class="cal-month"><div class="cal-month-title">' + m.year + ' 年 ' + (m.month + 1) + ' 月</div>';
+      html += '<div class="cal-grid cal-head">';
+      ['一', '二', '三', '四', '五', '六', '日'].forEach(function (w, i) {
+        html += '<span class="' + (i >= 5 ? 'we' : '') + '">' + w + '</span>';
+      });
+      html += '</div><div class="cal-grid">';
+      for (var i = 0; i < offset; i++) html += '<div class="cal-blank"></div>';
+      m.rows.forEach(function (r) {
+        var d = C.parseKey(r.date);
+        var cls = 'day';
+        if (r.date === today) cls += ' is-today';
+        if (!r.memberId) cls += ' is-empty';
+        var title = C.formatMDWeek(r.date) + ' · ' + (r.name || '无人可值日') +
+          (r.leaveNames && r.leaveNames.length ? ' ｜ 请假：' + r.leaveNames.join('、') : '');
+        html += '<div class="' + cls + '" title="' + esc(title) + '">';
+        html += '<div class="dnum">' + (d.getDate() < 10 ? '0' + d.getDate() : d.getDate()) + '</div>';
+        if (r.memberId) {
+          html += '<div class="who" style="color:' + colorOf(r.memberId) + '">' +
+            '<i class="dot" style="background:' + colorOf(r.memberId) + '"></i><span>' + esc(r.name) + '</span></div>';
+        } else {
+          html += '<div class="who"><span>无人</span></div>';
+        }
+        if (r.leaveNames && r.leaveNames.length) {
+          var leaveTag = '假 ' + r.leaveNames[0] + (r.leaveNames.length > 1 ? '等' : '');
+          html += '<div class="tags"><span class="tag">' + esc(leaveTag) + '</span></div>';
+        }
+        html += '</div>';
+      });
+      var tail = (offset + m.rows.length) % 7;
+      if (tail !== 0) for (var t = 0; t < 7 - tail; t++) html += '<div class="cal-blank"></div>';
+      html += '</div></div>';
+    });
+    box.innerHTML = html;
   }
 
-  function shareLink() {
-    if (!state.members.length) {
-      say('先添加成员，才能生成分享链接。');
-      return;
-    }
-    var base = location.href.split('#')[0];
-    var ta = $('ioText');
-    ta.value = base + '#d=' + b64encode(payloadString());
-    ta.focus();
-    ta.select();
-    $('ioHint').textContent = '链接已经放在下面文本框里（很长是正常的）：复制发给室友，对方打开就能看到同样的名单并自动生成排班。';
+  function renderMembers() {
+    var st = S.state;
+    $('memberCount').textContent = st.members.length + ' 人';
+    $('memberEmpty').hidden = st.members.length > 0;
+    $('memberChips').innerHTML = st.members.map(function (m) {
+      return '<span class="chip"><i class="dot" style="background:' + colorOf(m.id) + '"></i>' +
+        '<span class="nm">' + esc(m.name) + '</span>' +
+        '<button class="x" type="button" data-remove-member="' + esc(m.id) + '" title="删除 ' + esc(m.name) + '">×</button></span>';
+    }).join('');
   }
 
-  // 从别人发来的 #d= 链接进入时，自动载入并生成
-  function loadFromHash() {
-    var hash = location.hash || '';
-    if (hash.indexOf('#d=') !== 0) return;
-    var text = '';
-    try {
-      text = b64decode(hash.slice(3));
-    } catch (e) {
-      text = '';
+  function renderLeaveSelect() {
+    var sel = $('leaveMember');
+    var st = S.state;
+    var current = sel.value;
+    if (!st.members.length) {
+      sel.innerHTML = '<option value="">先添加室友</option>';
+      sel.disabled = true;
+      return;
     }
-    if (!text || !applyPayload(text)) return;
-    try {
-      history.replaceState(null, '', location.pathname + location.search);
-    } catch (e) {
-      location.hash = '';
-    }
-    generate();
-    window.scrollTo(0, 0);
-    say('已从分享链接载入室友名单和请假，排班表也按同样的设置生成了。');
+    sel.disabled = false;
+    sel.innerHTML = st.members.map(function (m) {
+      return '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>';
+    }).join('');
+    sel.value = st.members.some(function (m) { return m.id === current; }) ? current : st.members[0].id;
   }
 
-  // ---------- 操作 ----------
-  function addMember() {
-    var input = $('memberName');
-    var name = (input.value || '').trim();
-    if (!name) {
-      say('请输入室友姓名。');
-      input.focus();
+  function renderLeaves() {
+    var st = S.state;
+    var sorted = st.leaves.slice().sort(function (a, b) {
+      if (a.start !== b.start) return a.start < b.start ? -1 : 1;
+      return a.end < b.end ? -1 : 1;
+    });
+    $('leaveEmpty').hidden = sorted.length > 0;
+    $('leaveList').innerHTML = sorted.map(function (l) {
+      return '<li><i class="dot" style="background:' + colorOf(l.memberId) + '"></i>' +
+        '<span class="txt">' + esc(S.memberName(l.memberId) + ' · ' + C.formatMDWeek(l.start) + ' – ' + C.formatMDWeek(l.end)) + '</span>' +
+        '<button class="icon-btn" type="button" data-remove-leave="' + esc(l.id) + '" title="删除">×</button></li>';
+    }).join('');
+  }
+
+  function renderConfig() {
+    var cfg = S.state.config;
+    if (document.activeElement !== $('startDate')) $('startDate').value = cfg.start;
+    if (document.activeElement !== $('daysInput')) $('daysInput').value = String(cfg.days);
+  }
+
+  function renderStats() {
+    var st = S.state;
+    var stats = S.stats();
+    $('statsEmpty').hidden = !!st.schedule;
+    $('fairnessNote').textContent = S.fairnessText();
+    if (!st.schedule) {
+      $('statsList').innerHTML = '';
       return;
     }
-    name = name.slice(0, 12);
-    var dup = state.members.some(function (m) { return m.name === name; });
-    if (dup) {
-      say('已经有叫“' + name + '”的成员了。');
-      return;
-    }
-    state.members.push({ id: uid(), name: name });
-    input.value = '';
-    save();
+    var max = Math.max(1, stats.max);
+    $('statsList').innerHTML = stats.list.map(function (s) {
+      var pct = Math.round(s.count / max * 100);
+      var col = colorOf(s.id);
+      return '<div class="bar-row" title="' + esc(s.name + '：' + s.count + ' 天' + (s.leaveDays ? '，请假 ' + s.leaveDays + ' 天' : '')) + '">' +
+        '<span class="nm">' + esc(s.name) + (s.removed ? ' <em>(已删)</em>' : '') + '</span>' +
+        '<span class="track"><i class="fill" style="width:' + pct + '%;background:linear-gradient(90deg,' + col + '99,' + col + ')"></i></span>' +
+        '<span class="n">' + s.count + '<small>天</small></span>' +
+        '</div>';
+    }).join('');
+  }
+
+  function render() {
+    renderTop();
+    renderCalendar();
     renderMembers();
     renderLeaveSelect();
-    renderHint();
-    changed();
-    input.focus();
-  }
-
-  function removeMember(id) {
-    var m = null;
-    state.members = state.members.filter(function (x) {
-      if (x.id === id) {
-        m = x;
-        return false;
-      }
-      return true;
-    });
-    if (!m) return;
-    state.leaves = state.leaves.filter(function (l) { return l.memberId !== id; });
-    if (!state.members.length) {
-      state.schedule = null;
-      state.stale = false;
-      save();
-      renderAll();
-      say('成员都删掉了，排班表也清空了。');
-      return;
-    }
-    save();
-    renderMembers();
-    renderLeaveSelect();
     renderLeaves();
+    renderConfig();
     renderStats();
-    changed();
-    say('已删除成员：' + m.name + '（他的请假记录也一起删了）');
   }
 
-  function addLeave() {
-    var memberId = $('leaveMember').value;
-    var start = $('leaveStart').value;
-    var end = $('leaveEnd').value;
-    if (!state.members.length) {
-      say('请先添加成员。');
+  S.on(function (type, payload) {
+    if (type === 'toast') {
+      toast(payload);
       return;
     }
-    if (!memberId) {
-      say('请选择请假的成员。');
-      return;
-    }
-    if (!S.isDateKey(start) || !S.isDateKey(end)) {
-      say('请填写请假的开始和结束日期。');
-      return;
-    }
-    if (end < start) {
-      say('结束日期不能早于开始日期。');
-      return;
-    }
-    state.leaves.push({ id: uid(), memberId: memberId, start: start, end: end });
-    save();
-    renderLeaves();
-    changed();
-    say('已添加请假：' + memberName(memberId) + ' ' + S.formatMDWeek(start) + ' – ' + S.formatMDWeek(end) + '，记得重新生成排班。');
-  }
+    render();
+  });
 
-  function removeLeave(id) {
-    state.leaves = state.leaves.filter(function (l) { return l.id !== id; });
-    save();
-    renderLeaves();
-    changed();
-  }
-
-  function generate() {
-    if (!state.members.length) {
-      say('请先添加成员。');
-      return;
-    }
-    var startKey = $('startDate').value;
-    if (!S.isDateKey(startKey)) {
-      say('起始日期填写不正确。');
-      return;
-    }
-    var days = parseInt($('daysInput').value, 10);
-    if (!(days > 0)) days = DEFAULT_DAYS;
-    if (days > MAX_DAYS) days = MAX_DAYS;
-    $('daysInput').value = String(days);
-
-    state.config.start = startKey;
-    state.config.days = days;
-
-    var res = S.buildSchedule(state.members, state.leaves, startKey, days);
-    state.schedule = {
-      start: res.start,
-      days: res.days,
-      rows: res.rows.map(function (r) {
-        return { date: r.date, memberId: r.memberId, name: r.name, leaveNames: r.leaveNames };
-      })
-    };
-    state.stale = false;
-    save();
-    renderSchedule();
-    renderStats();
-    renderHint();
-
-    var unassigned = res.unassigned;
-    say(unassigned > 0
-      ? '已生成 ' + days + ' 天排班，其中 ' + unassigned + ' 天全员请假，没安排人。'
-      : '已生成 ' + days + ' 天排班。');
-    var table = $('scheduleTable');
-    if (table && table.scrollIntoView) {
-      table.scrollIntoView({ block: 'nearest' });
-    }
-  }
-
-  // ---------- 事件 ----------
-  function bind() {
-    $('addMemberBtn').addEventListener('click', addMember);
-    $('memberName').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        addMember();
+  function doAction(act) {
+    if (act === 'addMember') {
+      var input = $('memberName');
+      if (S.addMember(input.value)) {
+        input.value = '';
+        input.focus();
       }
-    });
-    $('memberList').addEventListener('click', function (e) {
-      var id = e.target && e.target.getAttribute && e.target.getAttribute('data-remove-member');
-      if (id) removeMember(id);
-    });
-    $('leaveList').addEventListener('click', function (e) {
-      var id = e.target && e.target.getAttribute && e.target.getAttribute('data-remove-leave');
-      if (id) removeLeave(id);
-    });
-    $('addLeaveBtn').addEventListener('click', addLeave);
-    $('generateBtn').addEventListener('click', generate);
-    $('exportBtn').addEventListener('click', exportData);
-    $('importBtn').addEventListener('click', importData);
-    $('shareBtn').addEventListener('click', shareLink);
-    $('startDate').addEventListener('change', function () {
-      var v = this.value;
-      if (!S.isDateKey(v)) {
-        say('起始日期填写不正确。');
-        this.value = state.config.start;
-        return;
+      return;
+    }
+    if (act === 'generate') {
+      S.generate();
+      return;
+    }
+    if (act === 'addLeave') {
+      if (S.addLeave($('leaveMember').value, $('leaveStart').value, $('leaveEnd').value)) {
+        $('leaveStart').value = C.todayKey();
+        $('leaveEnd').value = C.todayKey();
       }
-      state.config.start = v;
-      changed();
-    });
-    $('daysInput').addEventListener('change', function () {
-      var d = parseInt(this.value, 10);
-      if (!(d > 0)) {
-        this.value = String(state.config.days);
-        return;
+      return;
+    }
+    if (act === 'export') {
+      $('dataPanel').open = true;
+      var ta = $('ioText');
+      ta.value = S.payloadString();
+      ta.focus();
+      ta.select();
+      $('ioHint').textContent = '已经导出到下面文本框：复制保存，在别的设备粘贴后点“导入数据”。';
+      return;
+    }
+    if (act === 'import') {
+      $('ioHint').textContent = S.importText($('ioText').value)
+        ? '导入成功，已写入云端。'
+        : '这段内容认不出来，请确认是导出的文本。';
+      return;
+    }
+    if (act === 'share') {
+      var link = S.shareLink();
+      $('dataPanel').open = true;
+      var t2 = $('ioText');
+      t2.value = link;
+      t2.focus();
+      t2.select();
+      $('ioHint').textContent = '数据已经存在云端，把页面链接发给室友，输入同一个密码就能看到同一份排班。';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(function () {
+          $('ioHint').textContent = '链接已复制到剪贴板，发给室友（对方需要输入密码）。';
+        }).catch(function () {});
       }
-      if (d > MAX_DAYS) d = MAX_DAYS;
-      if (d < 1) d = 1;
-      this.value = String(d);
-      state.config.days = d;
-      changed();
+      return;
+    }
+    if (act === 'reset') {
+      if (window.confirm('确定清空所有成员、请假和排班吗？此操作不可撤销。')) S.reset();
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (t) {
+      doAction(t.getAttribute('data-act'));
+      return;
+    }
+    var rm = e.target.closest ? e.target.closest('[data-remove-member]') : null;
+    if (rm) {
+      S.removeMember(rm.getAttribute('data-remove-member'));
+      return;
+    }
+    var rl = e.target.closest ? e.target.closest('[data-remove-leave]') : null;
+    if (rl) S.removeLeave(rl.getAttribute('data-remove-leave'));
+  });
+
+  /* ============================================================
+     入口：密码 → 显示界面 → 连云端
+     ============================================================ */
+  function enterApp() {
+    $('gate').hidden = true;
+    $('app').hidden = false;
+    render();
+    S.boot();
+  }
+
+  function tryEnter() {
+    var input = $('pwInput');
+    if ((input.value || '') !== CONFIG.password) {
+      $('pwMsg').textContent = '密码不对，再试一次。';
+      input.select();
+      return;
+    }
+    $('pwMsg').textContent = '';
+    enterApp();
+  }
+
+  function diagnose() {
+    var out = $('diagOut');
+    out.hidden = false;
+    var lines = [];
+    function push(s) {
+      lines.push(s);
+      out.textContent = lines.join('\n');
+    }
+    push('环境：' + CONFIG.envId);
+    push('正在加载 SDK 并尝试匿名登录…');
+    CL.init({
+      envId: CONFIG.envId,
+      region: CONFIG.region,
+      table: CONFIG.table,
+      rowId: '22222222-2222-4222-8222-222222222222',
+      collection: CONFIG.collection,
+      docId: 'diag'
+    }).then(function (info) {
+      push('① 匿名登录：成功（' + (info && info.mode === 'pg' ? 'PostgreSQL 模式' : '文档数据库模式') + '）');
+      return CL.load().then(function (payload) {
+        push('② 读取：成功' + (payload ? '（已有 ' + payload.length + ' 字符）' : '（还没有自检记录，正常）'));
+      });
+    }).then(function () {
+      return CL.save(JSON.stringify({ diag: true, at: new Date().toISOString() })).then(function () {
+        push('③ 写入：成功');
+        push('结论：云端可用，可以输入密码进入了。');
+      });
+    }).catch(function (err) {
+      var e = CL.explain(err);
+      push('失败：' + (e.hint || e.raw));
+      push('原始错误：' + e.raw);
+      if (!e.hint) push('（把上面这段发给我，我按错误码继续查。）');
     });
   }
 
   function init() {
-    state = load();
-    renderAll();
-    bind();
-    if (!storageOk) {
-      say('这个浏览器不允许保存本地数据，刷新后数据会丢失。');
-    }
-    // 默认把请假日期填成今天，省得每次都点日历
-    var today = S.todayKey();
-    if (!$('leaveStart').value) $('leaveStart').value = today;
-    if (!$('leaveEnd').value) $('leaveEnd').value = today;
-    loadFromHash();
+    S.state = S.defaultState();
+    render();
+    $('pwBtn').addEventListener('click', tryEnter);
+    $('diagBtn').addEventListener('click', diagnose);
+    $('pwInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        tryEnter();
+      }
+    });
+    $('cloudRetry').addEventListener('click', function () {
+      S.hideCloudError();
+      S.boot();
+    });
+    $('memberName').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doAction('addMember');
+      }
+    });
+    $('startDate').addEventListener('change', function () {
+      if (!S.setStart(this.value)) render();
+    });
+    $('daysInput').addEventListener('change', function () {
+      if (!S.setDays(this.value)) render();
+    });
+    if (/[?&]embed=1/.test(location.search)) document.body.classList.add('embed');
+    $('leaveStart').value = C.todayKey();
+    $('leaveEnd').value = C.todayKey();
+    $('pwInput').focus();
   }
 
   if (document.readyState === 'loading') {
