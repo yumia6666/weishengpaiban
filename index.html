@@ -81,6 +81,14 @@
     margin: 16px 0 0;
     min-height: 1.5em;
   }
+  textarea {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 560px;
+    margin: 4px 0;
+    font-family: inherit;
+    font-size: 14px;
+  }
   /* 窄屏：一行只放一个输入项，避免右侧被截断 */
   @media (max-width: 560px) {
     .row label {
@@ -98,6 +106,11 @@
 <body>
 
 <h1>寝室卫生排班</h1>
+<p class="note" id="dataNote">
+  数据只保存在“当前这个浏览器”里：换手机、换浏览器、或换网址（本地文件 ↔ 网上地址）打开都是空的，这是正常现象。
+  要让室友看到同样的名单和排班，用页面最下面的“生成分享链接”。
+</p>
+<noscript><p class="note">这个页面需要浏览器打开 JavaScript 才能用。</p></noscript>
 
 <h2>成员管理</h2>
 <div class="row">
@@ -147,6 +160,15 @@
 <h2>累计值日天数</h2>
 <ul id="statsList"></ul>
 <p id="fairnessNote" class="note"></p>
+
+<h2>导出 · 导入 · 分享</h2>
+<div class="row">
+  <button id="exportBtn" type="button">导出数据</button>
+  <button id="importBtn" type="button">导入数据</button>
+  <button id="shareBtn" type="button">生成分享链接</button>
+</div>
+<textarea id="ioText" rows="3" placeholder="导出的内容会出现在这里；导入时把内容或分享链接粘贴进来"></textarea>
+<p id="ioHint" class="note"></p>
 
 <p id="message" role="status"></p>
 
@@ -925,12 +947,125 @@
     renderSchedule();
     renderStats();
     renderHint();
+    $('dataNote').hidden = state.members.length > 0;
   }
 
   function changed() {
     if (state.schedule) state.stale = true;
     save();
     renderHint();
+  }
+
+  // ---------- 导出 / 导入 / 分享链接 ----------
+  // 只带“成员 + 请假 + 设置”，排班表可以按同样设置重新算出来，链接也就短很多
+  function payloadString() {
+    return JSON.stringify({
+      v: 1,
+      members: state.members.map(function (m) {
+        return { id: m.id, name: m.name };
+      }),
+      leaves: state.leaves.map(function (l) {
+        return { memberId: l.memberId, start: l.start, end: l.end };
+      }),
+      config: { start: state.config.start, days: state.config.days }
+    });
+  }
+
+  function b64encode(str) {
+    var bytes = new TextEncoder().encode(str);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function b64decode(str) {
+    var s = String(str).replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function applyPayload(text) {
+    var data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return false;
+    }
+    if (!data || typeof data !== 'object' || !Array.isArray(data.members)) return false;
+    var next = normalize(data);
+    if (!next.members.length) return false;
+    state = next;
+    save();
+    renderAll();
+    return true;
+  }
+
+  function exportData() {
+    var ta = $('ioText');
+    ta.value = payloadString();
+    ta.focus();
+    ta.select();
+    $('ioHint').textContent = '已经导出到下面文本框：复制保存下来，在别的设备上粘贴进来点“导入数据”即可。';
+  }
+
+  function importData() {
+    var ta = $('ioText');
+    var text = (ta.value || '').trim();
+    if (!text) {
+      $('ioHint').textContent = '先把导出的内容或分享链接粘贴到下面的文本框里。';
+      return;
+    }
+    var hashAt = text.indexOf('#d=');
+    if (hashAt >= 0) {
+      try {
+        text = b64decode(text.slice(hashAt + 3));
+      } catch (e) {
+        text = '';
+      }
+    }
+    if (!text || !applyPayload(text)) {
+      $('ioHint').textContent = '这段内容认不出来，请确认是从本页面“导出”的文本或“生成分享链接”的链接。';
+      return;
+    }
+    $('ioHint').textContent = '导入成功：名单和请假已经换成对方那份，排班表按同样的设置生成了。';
+    generate();
+  }
+
+  function shareLink() {
+    if (!state.members.length) {
+      say('先添加成员，才能生成分享链接。');
+      return;
+    }
+    var base = location.href.split('#')[0];
+    var ta = $('ioText');
+    ta.value = base + '#d=' + b64encode(payloadString());
+    ta.focus();
+    ta.select();
+    $('ioHint').textContent = '链接已经放在下面文本框里（很长是正常的）：复制发给室友，对方打开就能看到同样的名单并自动生成排班。';
+  }
+
+  // 从别人发来的 #d= 链接进入时，自动载入并生成
+  function loadFromHash() {
+    var hash = location.hash || '';
+    if (hash.indexOf('#d=') !== 0) return;
+    var text = '';
+    try {
+      text = b64decode(hash.slice(3));
+    } catch (e) {
+      text = '';
+    }
+    if (!text || !applyPayload(text)) return;
+    try {
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (e) {
+      location.hash = '';
+    }
+    generate();
+    window.scrollTo(0, 0);
+    say('已从分享链接载入室友名单和请假，排班表也按同样的设置生成了。');
   }
 
   // ---------- 操作 ----------
@@ -1081,6 +1216,9 @@
     });
     $('addLeaveBtn').addEventListener('click', addLeave);
     $('generateBtn').addEventListener('click', generate);
+    $('exportBtn').addEventListener('click', exportData);
+    $('importBtn').addEventListener('click', importData);
+    $('shareBtn').addEventListener('click', shareLink);
     $('startDate').addEventListener('change', function () {
       var v = this.value;
       if (!S.isDateKey(v)) {
@@ -1116,6 +1254,7 @@
     var today = S.todayKey();
     if (!$('leaveStart').value) $('leaveStart').value = today;
     if (!$('leaveEnd').value) $('leaveEnd').value = today;
+    loadFromHash();
   }
 
   if (document.readyState === 'loading') {
